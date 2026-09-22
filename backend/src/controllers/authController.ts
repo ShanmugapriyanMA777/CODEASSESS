@@ -282,7 +282,7 @@ export async function login(req: Request, res: Response) {
       }
     }
 
-    if (!isMatch) {
+    if (!isMatch && user.passwordHash) {
       const candidates = getPasswordCandidates(password);
       for (const cand of candidates) {
         if (await bcrypt.compare(cand, user.passwordHash)) {
