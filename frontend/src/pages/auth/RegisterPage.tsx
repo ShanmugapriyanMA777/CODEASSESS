@@ -5,13 +5,11 @@ import { api } from '../../services/api';
 import { Terminal, Lock, Mail, User, AlertCircle, ArrowRight, BookOpen } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
-  const [role, setRole] = useState<'STUDENT' | 'ADMIN'>('STUDENT');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [department, setDepartment] = useState('Computer Science & Engineering');
-  const [designation, setDesignation] = useState('Faculty / Administrator');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,20 +26,15 @@ export const RegisterPage: React.FC = () => {
         name,
         email,
         password,
-        role,
-        rollNumber: role === 'STUDENT' ? rollNumber : undefined,
+        role: 'STUDENT',
+        rollNumber,
         department,
-        designation: role === 'ADMIN' ? designation : undefined,
       });
 
       if (res.data.success) {
         const { token, user } = res.data.data;
         login(token, user);
-        if (user.role === 'ADMIN') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/student/dashboard');
-        }
+        navigate('/student/dashboard');
       } else {
         setError(res.data.message || 'Registration failed');
       }
@@ -62,38 +55,10 @@ export const RegisterPage: React.FC = () => {
           <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-500 to-amber-600 flex items-center justify-center text-slate-950 shadow-xl shadow-amber-500/25 mb-3">
             <Terminal className="w-7 h-7 stroke-[2.5]" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            {role === 'ADMIN' ? 'Create Admin Account' : 'Create Candidate Account'}
-          </h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Create Candidate Account</h1>
           <p className="text-xs text-slate-400 mt-1">
-            {role === 'ADMIN' ? 'Register as Administrator or Faculty' : 'Register to attempt proctored coding assessments'}
+            Register to attempt proctored coding assessments
           </p>
-
-          {/* Role switcher pill */}
-          <div className="mt-4 flex rounded-lg p-1 bg-slate-950 border border-slate-800 w-full">
-            <button
-              type="button"
-              onClick={() => setRole('STUDENT')}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition ${
-                role === 'STUDENT'
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              🎓 Student
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('ADMIN')}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition ${
-                role === 'ADMIN'
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              ⚡ Administrator
-            </button>
-          </div>
         </div>
 
         {error && (
@@ -157,14 +122,12 @@ export const RegisterPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-white mb-1">
-                {role === 'ADMIN' ? 'Designation' : 'Roll / ID Number'}
-              </label>
+              <label className="block text-xs font-semibold text-white mb-1">Roll / ID Number</label>
               <input
                 type="text"
-                value={role === 'ADMIN' ? designation : rollNumber}
-                onChange={(e) => (role === 'ADMIN' ? setDesignation(e.target.value) : setRollNumber(e.target.value))}
-                placeholder={role === 'ADMIN' ? 'e.g. Faculty / Coordinator' : 'e.g. 312824104126'}
+                value={rollNumber}
+                onChange={(e) => setRollNumber(e.target.value)}
+                placeholder="e.g. 312824104126"
                 required
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
