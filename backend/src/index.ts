@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'file:/tmp/dev.db';
+}
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -10,7 +14,6 @@ import { sendError } from './utils/response.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 
 // Security and utility middleware
 app.use(helmet({
@@ -18,7 +21,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: [CORS_ORIGIN, 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
+  origin: true, // Allow all origins for API calls across Vercel and local
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -39,6 +42,7 @@ app.get('/api/health', (req, res) => {
     service: 'Online Coding Assessment Platform API',
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
+    serverless: !!process.env.VERCEL,
   });
 });
 
@@ -56,7 +60,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   return sendError(res, err.message || 'Internal Server Error', 500);
 });
 
-if (process.env.NODE_ENV !== 'test') {
+// Only start the listening server if not running in a serverless environment (e.g. Vercel)
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`=======================================================`);
     console.log(`Coding Assessment Platform Backend running on port ${PORT}`);

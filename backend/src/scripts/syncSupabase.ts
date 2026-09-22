@@ -41,7 +41,7 @@ async function syncAllStudentsToSupabase() {
       successCount++;
     }
 
-    // Try StudentProfile
+    // Try StudentProfile with DOB
     await supabase.from('StudentProfile').upsert({
       id: `sp-std-${s.registerNumber.trim()}`,
       userId,
@@ -49,6 +49,7 @@ async function syncAllStudentsToSupabase() {
       batchId: 'b3333333-3333-3333-3333-333333333333',
       department: 'Computer Science & Engineering',
       semester: 6,
+      dob: s.dob.trim(),
     }, { onConflict: 'userId' });
   }
 

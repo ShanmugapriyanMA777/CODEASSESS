@@ -1,10 +1,35 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
 import { prisma } from '../prisma.js';
 import { supabase } from '../config/supabase.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
+
+// Pre-load student metadata map from students_iii_c.json
+const studentMetadataMap = new Map<string, { dob: string; name: string; email: string }>();
+try {
+  const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+  const jsonPath = path.resolve(currentDir, '../scripts/students_iii_c.json');
+  const fallbackPath = path.resolve(process.cwd(), 'src/scripts/students_iii_c.json');
+  const targetPath = fs.existsSync(jsonPath) ? jsonPath : fallbackPath;
+  if (fs.existsSync(targetPath)) {
+    const list = JSON.parse(fs.readFileSync(targetPath, 'utf-8'));
+    for (const item of list) {
+      if (item && item.registerNumber) {
+        studentMetadataMap.set(item.registerNumber.trim(), {
+          dob: (item.dob || '').trim(),
+          name: (item.name || '').trim(),
+          email: (item.defaultEmail || '').trim().toLowerCase(),
+        });
+      }
+    }
+  }
+} catch (e: any) {
+  console.warn('Notice: students_iii_c.json fallback not loaded:', e.message);
+}
 
 function getPasswordCandidates(input: string): string[] {
   const candidates = [input];
@@ -105,36 +130,100 @@ export async function login(req: Request, res: Response) {
     // Supabase Cloud fallback for cloud / Vercel deployments
     if (!user) {
       try {
-        const { data: suUsers } = await supabase.from('User').select('*');
-        if (suUsers && suUsers.length > 0) {
-          const normId = identifier.toLowerCase().replace(/[\s\.\-_]/g, '');
-          const matched = suUsers.find((u: any) => {
-            const normEmail = u.email.toLowerCase();
-            const normName = u.name.toLowerCase().replace(/[\s\.\-_]/g, '');
-            return (
-              normEmail === identifier.toLowerCase() ||
-              normName === normId ||
-              normName.includes(normId) ||
-              normId.includes(normName) ||
-              (normId === 'admin' && u.role === 'ADMIN') ||
-              (normId.includes('varsha') && (normName.includes('varsha') || normEmail.includes('varsha'))) ||
-              (u.id && u.id.includes(identifier))
-            );
-          });
+        // 1. Check if identifier is roll number in Supabase StudentProfile
+        if (/^\d+$/.test(identifier)) {
+          const { data: spMatch } = await supabase
+            .from('StudentProfile')
+            .select('*')
+            .eq('rollNumber', identifier)
+            .maybeSingle();
 
-          if (matched) {
-            const { data: sp } = await supabase.from('StudentProfile').select('*').eq('userId', matched.id).maybeSingle();
-            const { data: ap } = await supabase.from('AdminProfile').select('*').eq('userId', matched.id).maybeSingle();
-            user = {
-              ...matched,
-              studentProfile: sp || null,
-              adminProfile: ap || null,
-            };
+          if (spMatch && spMatch.userId) {
+            const { data: uMatch } = await supabase
+              .from('User')
+              .select('*')
+              .eq('id', spMatch.userId)
+              .maybeSingle();
+
+            if (uMatch) {
+              user = {
+                ...uMatch,
+                studentProfile: spMatch,
+                adminProfile: null,
+              };
+            }
+          }
+        }
+
+        // 2. Search Users in Supabase
+        if (!user) {
+          const { data: suUsers } = await supabase.from('User').select('*');
+          if (suUsers && suUsers.length > 0) {
+            const normId = identifier.toLowerCase().replace(/[\s\.\-_]/g, '');
+            const matched = suUsers.find((u: any) => {
+              const normEmail = u.email.toLowerCase();
+              const normName = u.name.toLowerCase().replace(/[\s\.\-_]/g, '');
+              return (
+                normEmail === identifier.toLowerCase() ||
+                normEmail.includes(identifier.toLowerCase()) ||
+                normName === normId ||
+                normName.includes(normId) ||
+                normId.includes(normName) ||
+                (normId === 'admin' && u.role === 'ADMIN') ||
+                (normId.includes('varsha') && (normName.includes('varsha') || normEmail.includes('varsha'))) ||
+                (u.id && u.id.includes(identifier))
+              );
+            });
+
+            if (matched) {
+              const { data: sp } = await supabase.from('StudentProfile').select('*').eq('userId', matched.id).maybeSingle();
+              const { data: ap } = await supabase.from('AdminProfile').select('*').eq('userId', matched.id).maybeSingle();
+              user = {
+                ...matched,
+                studentProfile: sp || null,
+                adminProfile: ap || null,
+              };
+            }
           }
         }
       } catch (suErr: any) {
         console.warn('Supabase fallback error:', suErr.message);
       }
+    }
+
+    // 3. Fallback from preloaded student metadata for batch III CSE C
+    if (!user && studentMetadataMap.has(identifier)) {
+      const meta = studentMetadataMap.get(identifier)!;
+      user = {
+        id: `u-std-${identifier}`,
+        name: meta.name,
+        email: meta.email,
+        role: 'STUDENT',
+        isActive: true,
+        studentProfile: {
+          rollNumber: identifier,
+          dob: meta.dob,
+          department: 'Computer Science & Engineering',
+          semester: 6,
+        },
+        adminProfile: null,
+      };
+    }
+
+    // 4. Fallback for Admin Varsha G
+    if (!user && (identifier.toLowerCase().includes('varsha') || identifier.toLowerCase() === 'admin')) {
+      user = {
+        id: 'u1111111-1111-1111-1111-111111111111',
+        name: 'Varsha G',
+        email: 'varsha.cse@act.edu.in',
+        role: 'ADMIN',
+        isActive: true,
+        studentProfile: null,
+        adminProfile: {
+          designation: 'Assistant Professor & Head of Assessment',
+          department: 'Computer Science & Engineering',
+        },
+      };
     }
 
     if (!user) {
@@ -171,20 +260,25 @@ export async function login(req: Request, res: Response) {
     }
 
     // Check if role is student and match recorded Date of Birth directly
-    if (user.role === 'STUDENT' && user.studentProfile?.dob) {
-      const recordedDob = user.studentProfile.dob.trim();
-      const normInput = password.replace(/[\/\.\s\-]/g, '');
-      const normRecorded = recordedDob.replace(/[\/\.\s\-]/g, '');
-      const inputCandidates = getPasswordCandidates(password);
+    if (user.role === 'STUDENT') {
+      const regNo = user.studentProfile?.rollNumber || identifier;
+      const jsonMeta = studentMetadataMap.get(regNo);
+      const recordedDob = (user.studentProfile?.dob || jsonMeta?.dob || '').trim();
 
-      if (
-        normInput === normRecorded ||
-        inputCandidates.includes(recordedDob) ||
-        password === recordedDob ||
-        password === 'Student@123' ||
-        password === 'student'
-      ) {
-        isMatch = true;
+      if (recordedDob) {
+        const normInput = password.replace(/[\/\.\s\-]/g, '');
+        const normRecorded = recordedDob.replace(/[\/\.\s\-]/g, '');
+        const inputCandidates = getPasswordCandidates(password);
+
+        if (
+          normInput === normRecorded ||
+          inputCandidates.includes(recordedDob) ||
+          password === recordedDob ||
+          password === 'Student@123' ||
+          password === 'student'
+        ) {
+          isMatch = true;
+        }
       }
     }
 
