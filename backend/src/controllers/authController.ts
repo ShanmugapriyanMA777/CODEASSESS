@@ -211,7 +211,7 @@ export async function login(req: Request, res: Response) {
     }
 
     // 4. Fallback for Admin Varsha G
-    if (!user && (identifier.toLowerCase().includes('varsha') || identifier.toLowerCase() === 'admin')) {
+    if (!user && (identifier.toLowerCase() === 'varsha.cse@act.edu.in' || identifier.toLowerCase() === 'admin')) {
       user = {
         id: 'u1111111-1111-1111-1111-111111111111',
         name: 'Varsha G',
@@ -236,6 +236,7 @@ export async function login(req: Request, res: Response) {
     // Check if role is admin and match common admin master passwords
     if (user.role === 'ADMIN') {
       const allowedAdminPasswords = [
+        'varshacse@act3128',
         'Varsha@123',
         'varsha@123',
         'varshag@act3128',
@@ -296,7 +297,7 @@ export async function login(req: Request, res: Response) {
       return sendError(
         res,
         user.role === 'ADMIN'
-          ? 'Invalid admin credentials. Use password "Varsha@123" or "Admin@123".'
+          ? 'Invalid admin credentials. Use password "varshacse@act3128" or "Admin@123".'
           : 'Invalid register number / email or password (for students, initial password is your Date of Birth: DD-MM-YYYY)',
         401
       );
