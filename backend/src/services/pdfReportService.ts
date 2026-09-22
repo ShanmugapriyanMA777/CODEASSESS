@@ -432,7 +432,7 @@ export class PdfReportService {
     const subHeader = options.subHeader || '(An Autonomous Institution, Affiliated to Anna University, Chennai.)';
     const accreditation = options.accreditation || "Approved by AICTE, Accredited by NAAC with 'A+' Grade";
     const location = options.location || 'OMR, Navalur, Thalambur, Chennai.-600130';
-    const statementTitle = options.statementTitle || 'IAT1 - ODD SEMESTER - 2026';
+    const statementTitle = options.statementTitle || 'ODD SEMESTER - 2026';
     const statementSub = options.statementSub || 'PORTAL MARK ENTRY STATEMENT';
     const programme = options.programme || 'PROGRAMME : B.E. COMPUTER SCIENCE AND ENGINEERING';
     const batchSec = options.batchSec || 'BATCH : 2024 - SEC. : C';

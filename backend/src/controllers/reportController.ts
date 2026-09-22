@@ -222,7 +222,7 @@ async function buildClassStatementPayload(req: AuthRequest) {
     subHeader: (subHeader as string) || '(An Autonomous Institution, Affiliated to Anna University, Chennai.)',
     accreditation: (accreditation as string) || "Approved by AICTE, Accredited by NAAC with 'A+' Grade",
     location: (location as string) || 'OMR, Navalur, Thalambur, Chennai.-600130',
-    statementTitle: (statementTitle as string) || 'IAT1 - ODD SEMESTER - 2026',
+    statementTitle: (statementTitle as string) || 'ODD SEMESTER - 2026',
     statementSub: (statementSub as string) || 'PORTAL MARK ENTRY STATEMENT',
     programme: (programme as string) || (batch ? `PROGRAMME : B.E. ${batch.name.toUpperCase()}` : 'PROGRAMME : B.E. COMPUTER SCIENCE AND ENGINEERING'),
     batchSec: (batchSec as string) || (batch ? `BATCH : ${batch.academicYear || '2024'} - SEC. : ${batch.code}` : 'BATCH : 2024 - SEC. : C'),
