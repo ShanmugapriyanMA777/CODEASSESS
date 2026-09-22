@@ -97,6 +97,62 @@ export const QuestionForm: React.FC = () => {
     });
   };
 
+  const handleDescriptionPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    
+    const hasInput = /input( format)?\s*:/i.test(pastedText);
+    const hasOutput = /output( format)?\s*:/i.test(pastedText);
+    
+    if (hasInput || hasOutput) {
+      e.preventDefault();
+      
+      let descStr = pastedText;
+      let inputStr = '';
+      let outputStr = '';
+      let constraintStr = '';
+      
+      const constraintMatch = descStr.match(/constraints?\s*:([\s\S]*)/i);
+      if (constraintMatch) {
+        constraintStr = constraintMatch[1].trim();
+        descStr = descStr.substring(0, constraintMatch.index!).trim();
+      }
+      
+      const outputMatch = descStr.match(/output( format)?\s*:([\s\S]*)/i);
+      if (outputMatch) {
+        outputStr = outputMatch[2].trim();
+        descStr = descStr.substring(0, outputMatch.index!).trim();
+      }
+      
+      const inputMatch = descStr.match(/input( format)?\s*:([\s\S]*)/i);
+      if (inputMatch) {
+        inputStr = inputMatch[2].trim();
+        descStr = descStr.substring(0, inputMatch.index!).trim();
+      }
+      
+      setDescription(descStr);
+      if (inputStr) setInputFormat(inputStr);
+      if (outputStr) setOutputFormat(outputStr);
+      if (constraintStr) setConstraints(constraintStr);
+    }
+  };
+
+  const handleTestCasePaste = (idx: number, e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    const outputMatch = pastedText.match(/output\s*:\s*([\s\S]*)/i) || pastedText.match(/\boutput\b\s*\n([\s\S]*)/i) || pastedText.match(/expected output\s*:\s*([\s\S]*)/i);
+    
+    if (outputMatch) {
+      e.preventDefault();
+      const fullOutput = outputMatch[1].trim();
+      const fullInput = pastedText.substring(0, outputMatch.index!).replace(/input\s*:/i, '').trim();
+      
+      setTestCases((prev) => {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], input: fullInput, expectedOutput: fullOutput };
+        return copy;
+      });
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -257,7 +313,8 @@ export const QuestionForm: React.FC = () => {
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Write a clear statement of the problem..."
+            onPaste={handleDescriptionPaste}
+            placeholder="Write a clear statement of the problem... (Pro-tip: Paste a full problem here to auto-extract Input/Output/Constraints)"
             className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-sans"
           />
         </div>
@@ -393,7 +450,8 @@ export const QuestionForm: React.FC = () => {
                     rows={2}
                     value={tc.input}
                     onChange={(e) => handleTestCaseChange(idx, 'input', e.target.value)}
-                    placeholder="Input string..."
+                    onPaste={(e) => handleTestCasePaste(idx, e)}
+                    placeholder="Input string... (Tip: paste 'Input: X Output: Y' here)"
                     className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-xs text-slate-100 font-mono"
                   />
                 </div>
