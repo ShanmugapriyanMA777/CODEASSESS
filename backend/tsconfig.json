@@ -13,5 +13,5 @@
     "resolveJsonModule": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/verify_e2e.ts"]
+  "exclude": ["node_modules", "dist", "src/verify_e2e.ts", "src/scripts"]
 }

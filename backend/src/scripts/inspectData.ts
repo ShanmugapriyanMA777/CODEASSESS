@@ -21,11 +21,11 @@ async function inspectData() {
   console.log('\n=== BATCHES ===');
   const batches = await prisma.batch.findMany({
     include: {
-      _count: { select: { students: true, assessments: true } }
+      _count: { select: { students: true, assignments: true } }
     }
   });
   batches.forEach(b => {
-    console.log(`Batch: id=${b.id}, name="${b.name}", code="${b.code}", students=${b._count.students}, assessments=${b._count.assessments}`);
+    console.log(`Batch: id=${b.id}, name="${b.name}", code="${b.code}", students=${b._count.students}, assignments=${b._count.assignments}`);
   });
 
   console.log('\n=== ASSESSMENTS ===');
