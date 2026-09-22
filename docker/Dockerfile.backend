@@ -1,0 +1,18 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies, python, gcc, g++, openjdk17
+RUN apk add --no-cache python3 make g++ openjdk17-jre gcc
+
+COPY package*.json ./
+COPY prisma ./prisma/
+RUN npm ci
+
+COPY . .
+RUN npx prisma generate
+RUN npm run build
+
+EXPOSE 5000
+
+CMD ["npm", "start"]

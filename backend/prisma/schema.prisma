@@ -1,0 +1,281 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(uuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  role         String          @default("STUDENT") // "ADMIN" | "STUDENT"
+  avatarUrl    String?
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  studentProfile StudentProfile?
+  adminProfile   AdminProfile?
+  createdQuestions Question[]  @relation("CreatedQuestions")
+  createdAssessments Assessment[] @relation("CreatedAssessments")
+  submissions    Submission[]
+  assessmentResults AssessmentResult[]
+  suspiciousEvents SuspiciousEvent[]
+  assignments    AssessmentAssignment[]
+  attempts       AssessmentAttempt[]
+  auditLogs      AuditLog[]
+  generatedReports Report[]     @relation("GeneratedReports")
+  receivedReports  Report[]     @relation("ReceivedReports")
+}
+
+model StudentProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rollNumber  String   @unique
+  batchId     String?
+  batch       Batch?   @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  department  String   @default("Computer Science & Engineering")
+  semester    Int      @default(6)
+  phone       String?
+  dob         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AdminProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designation String   @default("Faculty / Assessment Coordinator")
+  department  String   @default("Computer Science & Engineering")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Batch {
+  id           String           @id @default(uuid())
+  name         String           @unique
+  description  String?
+  academicYear String           @default("2025-2026")
+  code         String           @unique
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  students     StudentProfile[]
+  assignments  AssessmentAssignment[]
+}
+
+model Question {
+  id              String               @id @default(uuid())
+  title           String
+  description     String
+  inputFormat     String
+  outputFormat    String
+  constraints     String
+  explanation     String?
+  difficulty      String               @default("Medium") // "Easy", "Medium", "Hard"
+  category        String               @default("Arrays") // "Arrays", "Strings", "Sorting", "Searching", "Mathematics", "Recursion", "Dynamic Programming", "Data Structures", "Algorithms", "SQL", "Other"
+  marks           Int                  @default(10)
+  starterCode     String               // JSON string storing starter code per language: { python: "...", java: "...", c: "...", cpp: "..." }
+  timeLimit       Int                  @default(2000) // ms
+  memoryLimit     Int                  @default(128)  // MB
+  isPublished     Boolean              @default(true)
+  createdById     String
+  createdBy       User                 @relation("CreatedQuestions", fields: [createdById], references: [id])
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  testCases       TestCase[]
+  assessmentQuestions AssessmentQuestion[]
+  submissions     Submission[]
+}
+
+model TestCase {
+  id             String   @id @default(uuid())
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  input          String
+  expectedOutput String
+  isHidden       Boolean  @default(false)
+  orderIndex     Int      @default(0)
+  explanation    String?
+  createdAt      DateTime @default(now())
+
+  submissionTestResults SubmissionTestResult[]
+}
+
+model Assessment {
+  id                 String               @id @default(uuid())
+  title              String
+  description        String
+  instructions       String?
+  duration           Int                  @default(60) // in minutes
+  startDate          DateTime?
+  endDate            DateTime?
+  totalMarks         Int                  @default(100)
+  passingMarks       Int                  @default(40)
+  allowedLanguages   String               @default("python,java,c,cpp") // comma-separated
+  randomizeQuestions Boolean              @default(false)
+  randomizeTestCases Boolean              @default(false)
+  maxAttempts        Int                  @default(1)
+  
+  // Anti-cheating controls
+  disableCopyPaste   Boolean              @default(true)
+  enforceFullscreen  Boolean              @default(true)
+  trackTabSwitches   Boolean              @default(true)
+
+  isPublished        Boolean              @default(false)
+  createdById        String
+  createdBy          User                 @relation("CreatedAssessments", fields: [createdById], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  questions          AssessmentQuestion[]
+  assignments        AssessmentAssignment[]
+  attempts           AssessmentAttempt[]
+  submissions        Submission[]
+  results            AssessmentResult[]
+  suspiciousEvents   SuspiciousEvent[]
+  reports            Report[]
+}
+
+model AssessmentQuestion {
+  id           String     @id @default(uuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  questionId   String
+  question     Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  order        Int        @default(0)
+  marks        Int        @default(10)
+
+  @@unique([assessmentId, questionId])
+}
+
+model AssessmentAssignment {
+  id           String     @id @default(uuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId    String?
+  student      User?      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batchId      String?
+  batch        Batch?     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  status       String     @default("PENDING") // "PENDING", "IN_PROGRESS", "COMPLETED", "EXPIRED"
+  assignedAt   DateTime   @default(now())
+
+  @@unique([assessmentId, studentId])
+}
+
+model AssessmentAttempt {
+  id                    String     @id @default(uuid())
+  assessmentId          String
+  assessment            Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId             String
+  student               User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startTime             DateTime   @default(now())
+  submitTime            DateTime?
+  status                String     @default("IN_PROGRESS") // "IN_PROGRESS", "COMPLETED", "TERMINATED"
+  remainingSeconds      Int        @default(3600)
+  currentCodeDraftsJson String     @default("{}") // Stores auto-saved drafts per question
+  autoSubmitted         Boolean    @default(false)
+  suspiciousEventsCount Int        @default(0)
+  updatedAt             DateTime   @updatedAt
+
+  @@unique([assessmentId, studentId])
+}
+
+model Submission {
+  id              String                 @id @default(uuid())
+  studentId       String
+  student         User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assessmentId    String?
+  assessment      Assessment?            @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+  questionId      String
+  question        Question               @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  sourceCode      String
+  language        String                 // "python", "java", "c", "cpp"
+  status          String                 @default("PENDING") // "ACCEPTED", "WRONG_ANSWER", "COMPILATION_ERROR", "RUNTIME_ERROR", "TIME_LIMIT_EXCEEDED"
+  marks           Float                  @default(0.0)
+  executionTime   Int                    @default(0) // ms
+  memoryUsed      Int                    @default(0) // KB
+  testCasesPassed Int                    @default(0)
+  totalTestCases  Int                    @default(0)
+  submittedAt     DateTime               @default(now())
+
+  testResults     SubmissionTestResult[]
+}
+
+model SubmissionTestResult {
+  id            String     @id @default(uuid())
+  submissionId  String
+  submission    Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testCaseId    String
+  testCase      TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  status        String     // "PASSED", "FAILED", "ERROR"
+  actualOutput  String?
+  expectedOutput String?
+  executionTime Int        @default(0)
+  isHidden      Boolean    @default(false)
+}
+
+model AssessmentResult {
+  id                 String     @id @default(uuid())
+  studentId          String
+  student            User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assessmentId       String
+  assessment         Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  totalMarks         Int
+  obtainedMarks      Float
+  percentage         Float
+  questionsAttempted Int
+  questionsSolved    Int
+  testCasesPassed    Int
+  totalTestCases     Int
+  timeTaken          Int        // seconds
+  rank               Int        @default(1)
+  isPassed           Boolean    @default(false)
+  submittedAt        DateTime   @default(now())
+
+  @@unique([assessmentId, studentId])
+}
+
+model SuspiciousEvent {
+  id           String     @id @default(uuid())
+  studentId    String
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  eventType    String     // "TAB_SWITCH", "WINDOW_BLUR", "FULLSCREEN_EXIT", "COPY_ATTEMPT", "PASTE_ATTEMPT"
+  timestamp    DateTime   @default(now())
+  metadata     String?    // JSON string with extra details (e.g., duration out, count)
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String   // "QUESTION_CREATED", "QUESTION_UPDATED", "ASSESSMENT_CREATED", etc.
+  entityType String   // "QUESTION", "ASSESSMENT", "STUDENT", "REPORT"
+  entityId   String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+model Report {
+  id           String      @id @default(uuid())
+  title        String
+  type         String      // "STUDENT_PERFORMANCE", "ASSESSMENT_SUMMARY", "BATCH_SUMMARY"
+  studentId    String?
+  student      User?       @relation("ReceivedReports", fields: [studentId], references: [id], onDelete: SetNull)
+  assessmentId String?
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+  generatedById String
+  generatedBy  User        @relation("GeneratedReports", fields: [generatedById], references: [id])
+  summaryJson  String?     // Stored metrics JSON for immutable historical view
+  createdAt    DateTime    @default(now())
+}
