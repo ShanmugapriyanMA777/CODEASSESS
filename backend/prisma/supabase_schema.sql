@@ -381,11 +381,11 @@ VALUES
     ('b3333333-3333-3333-3333-333333333333', 'III CSE C', 'Computer Science and Engineering - 3rd Year Section C', '2024-2028', 'CSE-III-C')
 ON CONFLICT ("code") DO NOTHING;
 
--- 6.2 Administrator Account (Password: varshag@act3128)
+-- 6.2 Administrator Account (Password: Varsha@123 / varshag@act3128)
 INSERT INTO "User" ("id", "name", "email", "passwordHash", "role", "isActive")
 VALUES 
     ('u1111111-1111-1111-1111-111111111111', 'Mrs. VARSHA', 'varsha.cse@act.edu.in', '$2a$10$J8Un2.cMQELmMiMZ2nU9FePLJt9xi4R0VP.GcCV0zR.SNWmxgLV8e', 'ADMIN', true)
-ON CONFLICT ("email") DO UPDATE SET "name" = EXCLUDED."name", "passwordHash" = EXCLUDED."passwordHash";
+ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name", "email" = EXCLUDED."email", "passwordHash" = EXCLUDED."passwordHash";
 
 INSERT INTO "AdminProfile" ("id", "userId", "designation", "department")
 VALUES 
