@@ -346,17 +346,17 @@ export const AssessmentForm: React.FC = () => {
           </div>
 
           <select
+            value=""
             onChange={(e) => {
               if (e.target.value) {
                 addQuestionToAssessment(e.target.value);
-                e.target.value = '';
               }
             }}
             className="bg-indigo-600 hover:bg-indigo-500 text-white border-none rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer"
           >
-            <option value="">+ Add Question from Bank</option>
+            <option value="" disabled>+ Add Question from Bank</option>
             {availableQuestions.map((q) => (
-              <option key={q.id} value={q.id}>
+              <option key={q.id} value={q.id} className="text-slate-900 bg-white">
                 {q.title} ({q.difficulty}, {q.marks}m)
               </option>
             ))}
