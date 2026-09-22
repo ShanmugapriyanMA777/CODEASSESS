@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc",
+    "build": "node -e \"if(process.env.VERCEL) require('fs').copyFileSync('prisma/schema.supabase.prisma', 'prisma/schema.prisma')\" && prisma generate && tsc",
     "start": "node dist/index.js",
-    "postinstall": "prisma generate",
+    "postinstall": "node -e \"if(process.env.VERCEL) require('fs').copyFileSync('prisma/schema.supabase.prisma', 'prisma/schema.prisma')\" && prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "tsx prisma/seed.ts",
