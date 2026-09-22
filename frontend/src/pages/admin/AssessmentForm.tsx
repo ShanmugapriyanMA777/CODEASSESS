@@ -346,10 +346,15 @@ export const AssessmentForm: React.FC = () => {
           </div>
 
           <select
-            value=""
+            defaultValue=""
             onChange={(e) => {
-              if (e.target.value) {
-                addQuestionToAssessment(e.target.value);
+              const val = e.target.value;
+              if (val) {
+                addQuestionToAssessment(val);
+                // Reset select value
+                e.target.value = '';
+                // Since this is uncontrolled now, we can also blur it to reset focus
+                e.target.blur();
               }
             }}
             className="bg-indigo-600 hover:bg-indigo-500 text-white border-none rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer"
