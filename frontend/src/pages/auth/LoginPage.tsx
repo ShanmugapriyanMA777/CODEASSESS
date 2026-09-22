@@ -32,7 +32,13 @@ export const LoginPage: React.FC = () => {
         setError(res.data.message || 'Login failed');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid register number / email or password');
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (!err.response) {
+        setError('Cannot connect to backend server. Please verify the backend is running.');
+      } else {
+        setError(err.message || 'Invalid register number / email or password');
+      }
     } finally {
       setLoading(false);
     }
