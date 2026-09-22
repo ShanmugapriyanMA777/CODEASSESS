@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma.js';
+import { supabase } from '../config/supabase.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 
@@ -37,32 +38,8 @@ export async function login(req: Request, res: Response) {
 
     let user: any = null;
 
-    if (identifier.includes('@')) {
-      user = await prisma.user.findUnique({
-        where: { email: identifier.toLowerCase() },
-        include: {
-          studentProfile: { include: { batch: true } },
-          adminProfile: true,
-        },
-      });
-    } else {
-      // 1. Check student by register number (rollNumber)
-      const profile = await prisma.studentProfile.findFirst({
-        where: { rollNumber: identifier },
-        include: {
-          user: {
-            include: {
-              studentProfile: { include: { batch: true } },
-              adminProfile: true,
-            },
-          },
-        },
-      });
-
-      if (profile && profile.user) {
-        user = profile.user;
-      } else {
-        // 2. Check by email without domain or direct email
+    try {
+      if (identifier.includes('@')) {
         user = await prisma.user.findUnique({
           where: { email: identifier.toLowerCase() },
           include: {
@@ -70,30 +47,93 @@ export async function login(req: Request, res: Response) {
             adminProfile: true,
           },
         });
+      } else {
+        // 1. Check student by register number (rollNumber)
+        const profile = await prisma.studentProfile.findFirst({
+          where: { rollNumber: identifier },
+          include: {
+            user: {
+              include: {
+                studentProfile: { include: { batch: true } },
+                adminProfile: true,
+              },
+            },
+          },
+        });
 
-        // 3. Check by user name (case-insensitive search, e.g. "Varsha G", "Mrs. VARSHA", "Varsha")
-        if (!user) {
-          const allUsers = await prisma.user.findMany({
+        if (profile && profile.user) {
+          user = profile.user;
+        } else {
+          // 2. Check by email without domain or direct email
+          user = await prisma.user.findUnique({
+            where: { email: identifier.toLowerCase() },
             include: {
               studentProfile: { include: { batch: true } },
               adminProfile: true,
             },
           });
 
+          // 3. Check by user name (case-insensitive search, e.g. "Varsha G", "Mrs. VARSHA", "Varsha")
+          if (!user) {
+            const allUsers = await prisma.user.findMany({
+              include: {
+                studentProfile: { include: { batch: true } },
+                adminProfile: true,
+              },
+            });
+
+            const normId = identifier.toLowerCase().replace(/[\s\.\-_]/g, '');
+            user = allUsers.find((u) => {
+              const normName = u.name.toLowerCase().replace(/[\s\.\-_]/g, '');
+              const normEmail = u.email.toLowerCase().split('@')[0].replace(/[\s\.\-_]/g, '');
+              return (
+                normName === normId ||
+                normName.includes(normId) ||
+                normId.includes(normName) ||
+                normEmail === normId ||
+                (normId === 'admin' && u.role === 'ADMIN') ||
+                (normId.includes('varsha') && (u.name.toLowerCase().includes('varsha') || u.email.toLowerCase().includes('varsha')))
+              );
+            });
+          }
+        }
+      }
+    } catch (prismaErr: any) {
+      console.warn('Prisma DB query failed, falling back to Supabase Cloud:', prismaErr.message);
+    }
+
+    // Supabase Cloud fallback for cloud / Vercel deployments
+    if (!user) {
+      try {
+        const { data: suUsers } = await supabase.from('User').select('*');
+        if (suUsers && suUsers.length > 0) {
           const normId = identifier.toLowerCase().replace(/[\s\.\-_]/g, '');
-          user = allUsers.find((u) => {
+          const matched = suUsers.find((u: any) => {
+            const normEmail = u.email.toLowerCase();
             const normName = u.name.toLowerCase().replace(/[\s\.\-_]/g, '');
-            const normEmail = u.email.toLowerCase().split('@')[0].replace(/[\s\.\-_]/g, '');
             return (
+              normEmail === identifier.toLowerCase() ||
               normName === normId ||
               normName.includes(normId) ||
               normId.includes(normName) ||
-              normEmail === normId ||
               (normId === 'admin' && u.role === 'ADMIN') ||
-              (normId.includes('varsha') && (u.name.toLowerCase().includes('varsha') || u.email.toLowerCase().includes('varsha')))
+              (normId.includes('varsha') && (normName.includes('varsha') || normEmail.includes('varsha'))) ||
+              (u.id && u.id.includes(identifier))
             );
           });
+
+          if (matched) {
+            const { data: sp } = await supabase.from('StudentProfile').select('*').eq('userId', matched.id).maybeSingle();
+            const { data: ap } = await supabase.from('AdminProfile').select('*').eq('userId', matched.id).maybeSingle();
+            user = {
+              ...matched,
+              studentProfile: sp || null,
+              adminProfile: ap || null,
+            };
+          }
         }
+      } catch (suErr: any) {
+        console.warn('Supabase fallback error:', suErr.message);
       }
     }
 
