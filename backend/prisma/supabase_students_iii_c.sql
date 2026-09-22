@@ -8,10 +8,14 @@ INSERT INTO "Batch" ("id", "name", "description", "academicYear", "code")
 VALUES ('b3333333-3333-3333-3333-333333333333', 'III CSE C', 'Computer Science and Engineering - 3rd Year Section C', '2024-2028', 'CSE-III-C')
 ON CONFLICT ("code") DO NOTHING;
 
+-- Ensure dob column exists on StudentProfile
+ALTER TABLE "StudentProfile" ADD COLUMN IF NOT EXISTS "dob" VARCHAR(50);
+ALTER TABLE "StudentProfile" ADD COLUMN IF NOT EXISTS "phone" VARCHAR(50);
+
 -- Assign default assessment to III CSE C batch
 INSERT INTO "AssessmentAssignment" ("id", "assessmentId", "batchId", "status")
 VALUES ('as333333-3333-3333-3333-333333333333', 'a1111111-1111-1111-1111-111111111111', 'b3333333-3333-3333-3333-333333333333', 'PENDING')
-ON CONFLICT ("assessmentId", "batchId") DO NOTHING;
+ON CONFLICT ("id") DO NOTHING;
 
 -- Insert 65 Student Candidate Accounts
 INSERT INTO "User" ("id", "name", "email", "passwordHash", "role", "isActive")

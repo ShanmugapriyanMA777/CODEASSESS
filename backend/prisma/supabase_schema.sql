@@ -529,7 +529,7 @@ ON CONFLICT ("assessmentId", "questionId") DO NOTHING;
 INSERT INTO "AssessmentAssignment" ("id", "assessmentId", "batchId", "status")
 VALUES 
     ('as333333-3333-3333-3333-333333333333', 'a1111111-1111-1111-1111-111111111111', 'b3333333-3333-3333-3333-333333333333', 'PENDING')
-ON CONFLICT ("assessmentId", "batchId") DO NOTHING;
+ON CONFLICT ("id") DO NOTHING;
 
 -- ==============================================================================
 -- 6.5 65 Student Candidates from III C DOB.xlsx (DOB Initial Passwords)
