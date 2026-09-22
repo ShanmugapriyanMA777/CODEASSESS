@@ -1,4 +1,6 @@
 import PDFDocument from 'pdfkit';
+import path from 'path';
+import fs from 'fs';
 import { prisma } from '../prisma.js';
 
 export class PdfReportService {
@@ -459,19 +461,16 @@ export class PdfReportService {
       doc.on('error', (err) => reject(err));
 
       const drawHeader = (isFirstPage: boolean) => {
-        // Institutional Crest & Header
-        doc.font('Helvetica-Bold').fontSize(14).fillColor('#000000')
-          .text(institutionName, 36, 30, { align: 'center' });
-        doc.font('Helvetica').fontSize(9).fillColor('#1e293b')
-          .text(subHeader, 36, 47, { align: 'center' });
-        doc.fontSize(8.5)
-          .text(accreditation, 36, 59, { align: 'center' });
-        doc.fontSize(8.5)
-          .text(location, 36, 70, { align: 'center' });
-        doc.font('Helvetica-Bold').fontSize(9.5)
-          .text(statementTitle, 36, 82, { align: 'center' });
-        doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000')
-          .text(statementSub, 36, 96, { align: 'center' });
+        // Institutional Crest & Header (Image Logo)
+        let logoPath = path.resolve(process.cwd(), 'assets', 'agni_logo.png');
+        if (!fs.existsSync(logoPath)) {
+            logoPath = path.resolve(process.cwd(), 'backend', 'assets', 'agni_logo.png');
+        }
+        try {
+          doc.image(logoPath, 36, 30, { width: 523 });
+        } catch (e: any) {
+          console.warn('Logo image not found or failed to load:', e.message);
+        }
 
         // Horizontal dividing line
         doc.moveTo(36, 112).lineTo(559, 112).lineWidth(1).strokeColor('#000000').stroke();
@@ -486,7 +485,7 @@ export class PdfReportService {
         doc.text(`Name of the Faculty : ${facultyName}`, 340, 136, { align: 'right', width: 219 });
 
         doc.text(`Subject Name : ${subjectName}`, 36, 150);
-        doc.text(`Subject Code : ${subjectCode}`, 380, 150, { align: 'right', width: 179 });
+        // Subject Code removed per user request
 
         // Table Header
         const tableY = 168;
