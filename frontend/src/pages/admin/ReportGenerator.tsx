@@ -617,21 +617,10 @@ export const ReportGenerator: React.FC = () => {
                   />
                 </div>
 
-                {/* Institutional Heading (Centered below logo) */}
-                <div className="text-center space-y-0.5 mb-5 font-serif">
-                  <h2 className="text-base sm:text-lg font-bold tracking-wide uppercase text-black">
-                    AGNI COLLEGE OF TECHNOLOGY
-                  </h2>
-                  <p className="text-xs text-black">
-                    (An Autonomous Institution, Affiliated to Anna University, Chennai.)
-                  </p>
-                  <p className="text-xs text-black">
-                    Approved by AICTE, Accredited by NAAC with &lsquo;A+&rsquo; Grade
-                  </p>
-                  <p className="text-xs text-black">
-                    OMR, Navalur, Thalambur, Chennai.-600130
-                  </p>
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-black pt-3">
+                {/* Document Title */}
+                <div className="text-center mb-4 font-serif">
+                  <div className="h-0.5 bg-black w-full mb-3" />
+                  <h3 className="text-base font-bold uppercase tracking-widest text-black">
                     ASSESSMENT REPORT
                   </h3>
                 </div>

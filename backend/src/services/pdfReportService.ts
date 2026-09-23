@@ -110,23 +110,29 @@ export class PdfReportService {
       if (!fs.existsSync(logoPath)) {
         logoPath = path.resolve(process.cwd(), 'backend', 'assets', 'agni_logo.png');
       }
+      let hasLogo = false;
       try {
-        doc.image(logoPath, 36, 16, { width: 523 });
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, 36, 16, { width: 523 });
+          hasLogo = true;
+        }
       } catch (e: any) {
         console.warn('Logo image not found or failed to load:', e.message);
       }
 
-      // Institutional Header Details (Centered below logo)
-      doc.font('Helvetica-Bold').fontSize(11).fillColor('#002b66')
-        .text('Agni College of Technology', 36, 62, { align: 'center', width: 523 });
-      doc.font('Helvetica').fontSize(8).fillColor('#334155')
-        .text('(An Autonomous Institution)', 36, 75, { align: 'center', width: 523 });
-      doc.fontSize(6.5).fillColor('#475569')
-        .text('Accredited by NBA, NAAC with A+ Grade, Estd. 2001, Approved by AICTE, New Delhi, Affiliated to Anna University, Chennai', 36, 85, { align: 'center', width: 523 });
-      doc.text('OMR, Chennai | 044-4997 2900 | 94450 54081 | www.act.edu.in', 36, 94, { align: 'center', width: 523 });
+      // If logo image is not found, fallback to clean text
+      if (!hasLogo) {
+        doc.font('Helvetica-Bold').fontSize(14).fillColor('#002b66')
+          .text('AGNI COLLEGE OF TECHNOLOGY', 36, 24, { align: 'center', width: 523 });
+        doc.font('Helvetica').fontSize(9).fillColor('#334155')
+          .text('(An Autonomous Institution, Affiliated to Anna University, Chennai)', 36, 42, { align: 'center', width: 523 });
+        doc.fontSize(8).fillColor('#475569')
+          .text('Accredited by NBA, NAAC with A+ Grade, Estd. 2001, Approved by AICTE, New Delhi', 36, 56, { align: 'center', width: 523 });
+        doc.text('OMR, Chennai | 044-4997 2900 | 94450 54081 | www.act.edu.in', 36, 68, { align: 'center', width: 523 });
+      }
 
-      // Dividing Line
-      doc.moveTo(36, 105).lineTo(559, 105).lineWidth(0.5).strokeColor('#cbd5e1').stroke();
+      // Dividing Line cleanly beneath the logo banner
+      doc.moveTo(36, 102).lineTo(559, 102).lineWidth(0.75).strokeColor('#cbd5e1').stroke();
 
       // Title Bar (Centered Title + Subtitle, Right-aligned Ref/Date)
       doc.font('Helvetica-Bold').fontSize(13).fillColor('#1e40af')
@@ -519,31 +525,40 @@ export class PdfReportService {
       doc.on('error', (err) => reject(err));
 
       const drawHeader = () => {
-        // Logo Image
+        // Logo Image (Contains official institution crest, name, accreditation, and contact)
         let logoPath = path.resolve(process.cwd(), 'assets', 'agni_logo.png');
         if (!fs.existsSync(logoPath)) {
           logoPath = path.resolve(process.cwd(), 'backend', 'assets', 'agni_logo.png');
         }
+        let hasImage = false;
         try {
-          doc.image(logoPath, 36, 20, { width: 523 });
+          if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 36, 16, { width: 523 });
+            hasImage = true;
+          }
         } catch (e: any) {
           console.warn('Logo image not found or failed to load:', e.message);
         }
 
-        // Institutional details below logo
-        doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000')
-          .text(institutionName, 36, 68, { align: 'center', width: 523 });
-        doc.font('Helvetica').fontSize(8.5).fillColor('#000000')
-          .text(subHeader, 36, 82, { align: 'center', width: 523 });
-        doc.text(accreditation, 36, 94, { align: 'center', width: 523 });
-        doc.text(location, 36, 106, { align: 'center', width: 523 });
+        // Only draw text if logo image is missing
+        if (!hasImage) {
+          doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000')
+            .text(institutionName, 36, 22, { align: 'center', width: 523 });
+          doc.font('Helvetica').fontSize(8.5).fillColor('#000000')
+            .text(subHeader, 36, 38, { align: 'center', width: 523 });
+          doc.text(accreditation, 36, 50, { align: 'center', width: 523 });
+          doc.text(location, 36, 62, { align: 'center', width: 523 });
+        }
+
+        // Horizontal dividing line cleanly beneath the logo banner
+        doc.moveTo(36, 100).lineTo(559, 100).lineWidth(0.75).strokeColor('#000000').stroke();
 
         // Document Title
-        doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000')
-          .text('ASSESSMENT REPORT', 36, 126, { align: 'center', width: 523 });
+        doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000')
+          .text('ASSESSMENT REPORT', 36, 106, { align: 'center', width: 523 });
 
-        // Metadata 2-column, 3-row boxed grid (X: 36, Y: 144, width: 523, height: 48)
-        const boxY = 144;
+        // Metadata 2-column, 3-row boxed grid (X: 36, Y: 124, width: 523, height: 48)
+        const boxY = 124;
         doc.rect(36, boxY, 523, 48).strokeColor('#000000').lineWidth(0.75).stroke();
         // Vertical divider in the middle
         doc.moveTo(36 + 261.5, boxY).lineTo(36 + 261.5, boxY + 48).strokeColor('#000000').lineWidth(0.75).stroke();
@@ -564,8 +579,8 @@ export class PdfReportService {
         doc.font('Helvetica-Bold').text('ASSESSMENT DATE : ', 42, boxY + 36, { continued: true }).font('Helvetica').text(assessmentDate);
         doc.font('Helvetica-Bold').text('Conducted : ', 305, boxY + 36, { continued: true }).font('Helvetica').text(conducted);
 
-        // Main Table Header (Y: 198, height: 26)
-        const tableY = 198;
+        // Main Table Header (Y: 178, height: 26)
+        const tableY = 178;
         doc.rect(36, tableY, 523, 26).strokeColor('#000000').lineWidth(0.75).stroke();
 
         const colLines = [72, 177, 369, 429, 494];
