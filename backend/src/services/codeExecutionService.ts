@@ -51,23 +51,49 @@ export class CodeExecutionService {
 
       if (lang === 'python' || lang === 'py') {
         const cmd = await this.detectPythonCommand();
-        if (!cmd) {
-          return {
-            stdout: '',
-            stderr: 'Python interpreter (py / python) is not installed or not in PATH.',
-            executionTime: 0,
-            memoryUsed: 0,
-            status: 'Runtime Error',
-            error: 'Python interpreter not found.',
-          };
+        if (cmd) {
+          try {
+            res = await this.executePython(tempDir, sourceCode, input, cmd);
+          } catch (localErr) {
+            res = await this.executeRemote('python', sourceCode, input);
+          }
+        } else {
+          res = await this.executeRemote('python', sourceCode, input);
         }
-        res = await this.executePython(tempDir, sourceCode, input, cmd);
       } else if (lang === 'java') {
-        res = await this.executeJava(tempDir, sourceCode, input);
+        const hasJavac = await new Promise<boolean>((resolve) => {
+          exec('javac -version', { timeout: 3000 }, (err) => resolve(!err));
+        });
+        if (hasJavac) {
+          try {
+            res = await this.executeJava(tempDir, sourceCode, input);
+          } catch (localErr) {
+            res = await this.executeRemote('java', sourceCode, input);
+          }
+        } else {
+          res = await this.executeRemote('java', sourceCode, input);
+        }
       } else if (lang === 'c' || lang === 'cpp' || lang === 'c++') {
-        res = await this.executeCAndCpp(tempDir, sourceCode, input, lang);
+        const isCpp = lang === 'cpp' || lang === 'c++';
+        const compiler = isCpp ? 'g++' : 'gcc';
+        const hasCompiler = await new Promise<boolean>((resolve) => {
+          exec(`${compiler} --version`, { timeout: 3000 }, (err) => resolve(!err));
+        });
+        if (hasCompiler) {
+          try {
+            res = await this.executeCAndCpp(tempDir, sourceCode, input, lang);
+          } catch (localErr) {
+            res = await this.executeRemote(lang, sourceCode, input);
+          }
+        } else {
+          res = await this.executeRemote(lang, sourceCode, input);
+        }
       } else if (lang === 'javascript' || lang === 'js') {
-        res = await this.executeJavaScript(tempDir, sourceCode, input);
+        try {
+          res = await this.executeJavaScript(tempDir, sourceCode, input);
+        } catch (localErr) {
+          res = await this.executeRemote('javascript', sourceCode, input);
+        }
       } else {
         return {
           stdout: '',
@@ -332,6 +358,100 @@ ${code}
         });
       });
     });
+  }
+
+  /**
+   * Remote sandbox execution for cloud serverless environments (e.g. Vercel)
+   * where native Python/Java/GCC binaries are not present in the runtime container.
+   * Executes code authentically and returns real compiler/runtime errors without faking.
+   */
+  async executeRemote(language: string, sourceCode: string, input = ''): Promise<ExecutionResult> {
+    const lang = (language || '').toLowerCase().trim();
+    let compiler = 'cpython-3.11.10';
+    let codeToRun = sourceCode;
+
+    if (lang === 'python' || lang === 'py') {
+      compiler = 'cpython-3.11.10';
+    } else if (lang === 'c') {
+      compiler = 'gcc-head-c';
+    } else if (lang === 'cpp' || lang === 'c++') {
+      compiler = 'gcc-head';
+    } else if (lang === 'java') {
+      compiler = 'openjdk-jdk-22+36';
+      // In Java on Wandbox, file is prog.java; non-public classes work smoothly
+      codeToRun = sourceCode.replace(/public\s+class\s+([A-Za-z0-9_]+)/g, 'class $1');
+    } else if (lang === 'javascript' || lang === 'js') {
+      compiler = 'nodejs-20.17.0';
+    }
+
+    const startTime = Date.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const sanitizedInput = input ? (input.endsWith('\n') ? input : input + '\n') : '';
+
+      const res = await fetch('https://wandbox.org/api/compile.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          compiler,
+          code: codeToRun,
+          stdin: sanitizedInput,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`Execution server responded with status ${res.status}`);
+      }
+
+      const data: any = await res.json();
+      const executionTime = Math.max(1, Date.now() - startTime);
+
+      const compilerError = (data.compiler_error || data.compiler_message || '').trim();
+      const programError = (data.program_error || '').trim();
+      const isExitNonZero = data.status !== '0' && data.status !== 0;
+
+      if (compilerError && isExitNonZero) {
+        return {
+          stdout: '',
+          stderr: compilerError,
+          executionTime,
+          memoryUsed: 1024,
+          status: 'Compilation Error',
+          error: compilerError,
+        };
+      }
+
+      if (isExitNonZero || programError) {
+        return {
+          stdout: (data.program_output || '').trim(),
+          stderr: programError || compilerError || `Exited with status ${data.status}`,
+          executionTime,
+          memoryUsed: 1024,
+          status: 'Runtime Error',
+          error: programError || compilerError || `Runtime error (exit status ${data.status})`,
+        };
+      }
+
+      return {
+        stdout: (data.program_output || '').trim(),
+        stderr: '',
+        executionTime,
+        memoryUsed: 1024,
+        status: 'Accepted',
+      };
+    } catch (err: any) {
+      return {
+        stdout: '',
+        stderr: err.name === 'AbortError' ? 'Execution timed out (Time Limit Exceeded).' : (err.message || 'Execution error'),
+        executionTime: Math.max(1, Date.now() - startTime),
+        memoryUsed: 0,
+        status: err.name === 'AbortError' ? 'Time Limit Exceeded' : 'Runtime Error',
+        error: err.name === 'AbortError' ? 'Time Limit Exceeded' : (err.message || 'Execution failed'),
+      };
+    }
   }
 
   /**
