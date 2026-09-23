@@ -795,64 +795,99 @@ export class PdfReportService {
             logoPath = path.resolve(__dirname, '../../../assets/agni_logo.png');
           }
 
+          // ── HEADER LAYOUT ──────────────────────────────────────────────────────
+          // Logo centered at top, text flows below — no overlap
+          const logoW = 460;  // wide banner logo
+          const logoX = 36 + (523 - logoW) / 2; // horizontally centered
+          const logoY = 14;
+
+          let headerTextStartY = 18; // default if no logo
+
           if (fs.existsSync(logoPath)) {
             try {
-              doc.image(logoPath, 38, 22, { width: 55 });
+              doc.image(logoPath, logoX, logoY, { width: logoW });
+              // Push text below the logo image (approx 55px tall at 460px wide)
+              headerTextStartY = logoY + 58;
             } catch (e) {
-              // Ignore image error safely
+              // Logo failed — fall through to text-only header
             }
           }
 
-          // Title Block
-          doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000')
-            .text(institutionName, 36, 22, { align: 'center', width: 523 });
+          if (headerTextStartY <= 20) {
+            // Text-only fallback (no logo)
+            doc.font('Helvetica-Bold').fontSize(13).fillColor('#002b66')
+              .text(institutionName, 36, headerTextStartY, { align: 'center', width: 523 });
+            headerTextStartY += 16;
 
-          doc.font('Helvetica').fontSize(7.5).fillColor('#222222')
-            .text(subHeader, 36, 37, { align: 'center', width: 523 });
+            doc.font('Helvetica').fontSize(8).fillColor('#222222')
+              .text(subHeader, 36, headerTextStartY, { align: 'center', width: 523 });
+            headerTextStartY += 12;
 
-          doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-            .text(accreditation, 36, 48, { align: 'center', width: 523 });
+            doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
+              .text(accreditation, 36, headerTextStartY, { align: 'center', width: 523 });
+            headerTextStartY += 11;
 
-          doc.font('Helvetica').fontSize(7).fillColor('#333333')
-            .text(location, 36, 59, { align: 'center', width: 523 });
+            doc.font('Helvetica').fontSize(7).fillColor('#333333')
+              .text(location, 36, headerTextStartY, { align: 'center', width: 523 });
+            headerTextStartY += 14;
+          }
 
+          // Thin divider line under logo / address block
+          doc.moveTo(36, headerTextStartY).lineTo(559, headerTextStartY)
+            .lineWidth(0.75).strokeColor('#000000').stroke();
+          headerTextStartY += 5;
+
+          // Report Title
           doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000')
-            .text('TRAINING FEEDBACK & STUDENT SKILL EVALUATION REPORT', 36, 73, { align: 'center', width: 523 });
+            .text('TRAINING FEEDBACK & STUDENT SKILL EVALUATION REPORT', 36, headerTextStartY, { align: 'center', width: 523 });
 
-          // Metadata box
-          const boxY = 90;
+          const reportTitleEndY = headerTextStartY + 16;
+
+          // Metadata box — positioned dynamically below the report title
+          const boxY = reportTitleEndY + 4;
           const midX = 295;
           const col1X = 42;
           const col1W = 245;
           const col2X = midX + 6;
           const col2W = 250;
-          const metaH = 46;
 
-          doc.rect(36, boxY, 523, metaH).strokeColor('#000000').lineWidth(0.75).stroke();
-          doc.moveTo(midX, boxY).lineTo(midX, boxY + metaH).strokeColor('#000000').lineWidth(0.75).stroke();
+          const metaRows = 3;
+          const rowH = 17;
+          const totalMetaH = metaRows * rowH;
 
-          const div1Y = boxY + 23;
-          doc.moveTo(36, div1Y).lineTo(559, div1Y).strokeColor('#000000').lineWidth(0.75).stroke();
+          doc.rect(36, boxY, 523, totalMetaH).strokeColor('#000000').lineWidth(0.75).stroke();
+          doc.moveTo(midX, boxY).lineTo(midX, boxY + totalMetaH).strokeColor('#000000').lineWidth(0.75).stroke();
 
-          // Row 1
-          doc.font('Helvetica-Bold').fontSize(7.5)
-            .text('PROGRAMME : ', col1X, boxY + 6, { continued: true, width: col1W })
+          const div1Y = boxY + rowH;
+          const div2Y = boxY + rowH * 2;
+          doc.moveTo(36, div1Y).lineTo(559, div1Y).strokeColor('#000000').lineWidth(0.5).stroke();
+          doc.moveTo(36, div2Y).lineTo(559, div2Y).strokeColor('#000000').lineWidth(0.5).stroke();
+
+          // Row 1 — Programme | Batch/Sec
+          doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
+            .text('PROGRAMME : ', col1X, boxY + 5, { continued: true, width: col1W })
             .font('Helvetica').text(programme, { width: col1W });
-
           doc.font('Helvetica-Bold').fontSize(7.5)
-            .text('BATCH / SEC. : ', col2X, boxY + 6, { continued: true, width: col2W })
+            .text('BATCH / SEC. : ', col2X, boxY + 5, { continued: true, width: col2W })
             .font('Helvetica').text(batchSec, { width: col2W });
 
-          // Row 2
+          // Row 2 — Name of Faculty | Subject Name
           doc.font('Helvetica-Bold').fontSize(7.5)
-            .text('FACULTY : ', col1X, div1Y + 6, { continued: true, width: col1W })
+            .text('Name of the Faculty : ', col1X, div1Y + 5, { continued: true, width: col1W })
             .font('Helvetica').text(facultyName, { width: col1W });
-
           doc.font('Helvetica-Bold').fontSize(7.5)
-            .text('SUBJECT : ', col2X, div1Y + 6, { continued: true, width: col2W })
+            .text('Subject Name : ', col2X, div1Y + 5, { continued: true, width: col2W })
             .font('Helvetica').text(subjectName, { width: col2W });
 
-          let nextY = boxY + metaH + 6;
+          // Row 3 — Assessment Date | Conducted
+          doc.font('Helvetica-Bold').fontSize(7.5)
+            .text('ASSESSMENT DATE : ', col1X, div2Y + 5, { continued: true, width: col1W })
+            .font('Helvetica').text(assessmentDate, { width: col1W });
+          doc.font('Helvetica-Bold').fontSize(7.5)
+            .text('Conducted : ', col2X, div2Y + 5, { continued: true, width: col2W })
+            .font('Helvetica').text(conducted, { width: col2W });
+
+          let nextY = boxY + totalMetaH + 6;
 
           // KPI Summary Box on first page
           if (isFirstPage) {
