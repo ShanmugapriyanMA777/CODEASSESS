@@ -3,10 +3,12 @@ import { prisma } from '../prisma.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 import { rankingService } from '../services/rankingService.js';
+import { resolveStudentDetails } from './assessmentController.js';
 
 export async function finishAssessment(req: AuthRequest, res: Response) {
   try {
     const studentId = req.user!.id;
+    const { effectiveUserId, studentIdsToMatch } = await resolveStudentDetails(studentId, req.user?.email);
     const { assessmentId } = req.body;
 
     if (!assessmentId) {
@@ -24,7 +26,7 @@ export async function finishAssessment(req: AuthRequest, res: Response) {
           },
         },
         attempts: {
-          where: { studentId },
+          where: { studentId: { in: studentIdsToMatch } },
         },
       },
     });
@@ -39,7 +41,7 @@ export async function finishAssessment(req: AuthRequest, res: Response) {
 
     // Fetch all submissions by this student for this assessment
     const submissions = await prisma.submission.findMany({
-      where: { assessmentId, studentId },
+      where: { assessmentId, studentId: { in: studentIdsToMatch } },
       orderBy: { submittedAt: 'desc' },
     });
 
@@ -77,7 +79,7 @@ export async function finishAssessment(req: AuthRequest, res: Response) {
     // Upsert AssessmentResult
     const result = await prisma.assessmentResult.upsert({
       where: {
-        assessmentId_studentId: { assessmentId, studentId },
+        assessmentId_studentId: { assessmentId, studentId: effectiveUserId },
       },
       update: {
         totalMarks,
@@ -93,7 +95,7 @@ export async function finishAssessment(req: AuthRequest, res: Response) {
       },
       create: {
         assessmentId,
-        studentId,
+        studentId: effectiveUserId,
         totalMarks,
         obtainedMarks,
         percentage,
@@ -121,7 +123,7 @@ export async function finishAssessment(req: AuthRequest, res: Response) {
 
     // Update Assignment status
     await prisma.assessmentAssignment.updateMany({
-      where: { assessmentId, studentId },
+      where: { assessmentId, studentId: { in: studentIdsToMatch } },
       data: { status: 'COMPLETED' },
     });
 
@@ -194,11 +196,13 @@ export async function getResults(req: AuthRequest, res: Response) {
 export async function getStudentResult(req: AuthRequest, res: Response) {
   try {
     const { assessmentId, studentId: requestedStudentId } = req.params;
-    const studentId = req.user?.role === 'STUDENT' ? req.user.id : requestedStudentId;
+    const rawStudentId = req.user?.role === 'STUDENT' ? req.user.id : requestedStudentId;
+    const { effectiveUserId, studentIdsToMatch } = await resolveStudentDetails(rawStudentId, req.user?.email);
 
-    const result = await prisma.assessmentResult.findUnique({
+    const result = await prisma.assessmentResult.findFirst({
       where: {
-        assessmentId_studentId: { assessmentId, studentId },
+        assessmentId,
+        studentId: { in: studentIdsToMatch },
       },
       include: {
         assessment: {
@@ -224,7 +228,7 @@ export async function getStudentResult(req: AuthRequest, res: Response) {
 
     // Also fetch the candidate's submissions for this assessment
     const submissions = await prisma.submission.findMany({
-      where: { assessmentId, studentId },
+      where: { assessmentId, studentId: { in: studentIdsToMatch } },
       include: {
         question: { select: { id: true, title: true, category: true, marks: true } },
       },

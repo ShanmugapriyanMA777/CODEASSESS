@@ -3,6 +3,7 @@ import { prisma } from '../prisma.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 import { evaluationService } from '../services/evaluationService.js';
+import { resolveStudentDetails } from './assessmentController.js';
 
 export async function runSampleCode(req: AuthRequest, res: Response) {
   try {
@@ -29,6 +30,7 @@ export async function runSampleCode(req: AuthRequest, res: Response) {
 export async function submitQuestionCode(req: AuthRequest, res: Response) {
   try {
     const studentId = req.user!.id;
+    const { effectiveUserId, studentIdsToMatch } = await resolveStudentDetails(studentId, req.user?.email);
     const { questionId, assessmentId, language, sourceCode } = req.body;
 
     if (!questionId || !language || !sourceCode) {
@@ -39,7 +41,7 @@ export async function submitQuestionCode(req: AuthRequest, res: Response) {
     if (assessmentId) {
       const assessment = await prisma.assessment.findUnique({
         where: { id: assessmentId },
-        include: { attempts: { where: { studentId } } },
+        include: { attempts: { where: { studentId: { in: studentIdsToMatch } } } },
       });
 
       if (!assessment) {
@@ -61,7 +63,7 @@ export async function submitQuestionCode(req: AuthRequest, res: Response) {
     }
 
     const summary = await evaluationService.submitCode(
-      studentId,
+      effectiveUserId,
       questionId,
       language,
       sourceCode,
@@ -78,15 +80,17 @@ export async function submitQuestionCode(req: AuthRequest, res: Response) {
 export async function autoSaveDraft(req: AuthRequest, res: Response) {
   try {
     const studentId = req.user!.id;
+    const { effectiveUserId, studentIdsToMatch } = await resolveStudentDetails(studentId, req.user?.email);
     const { assessmentId, questionId, code, language } = req.body;
 
     if (!assessmentId) {
       return sendError(res, 'assessmentId is required', 400);
     }
 
-    let attempt = await prisma.assessmentAttempt.findUnique({
+    let attempt = await prisma.assessmentAttempt.findFirst({
       where: {
-        assessmentId_studentId: { assessmentId, studentId },
+        assessmentId,
+        studentId: { in: studentIdsToMatch },
       },
     });
 
@@ -118,7 +122,7 @@ export async function autoSaveDraft(req: AuthRequest, res: Response) {
       attempt = await prisma.assessmentAttempt.create({
         data: {
           assessmentId,
-          studentId,
+          studentId: effectiveUserId,
           status: 'IN_PROGRESS',
           currentCodeDraftsJson: JSON.stringify(currentDrafts),
         },
@@ -134,6 +138,7 @@ export async function autoSaveDraft(req: AuthRequest, res: Response) {
 export async function recordSuspiciousEvent(req: AuthRequest, res: Response) {
   try {
     const studentId = req.user!.id;
+    const { effectiveUserId, studentIdsToMatch } = await resolveStudentDetails(studentId, req.user?.email);
     const { assessmentId, eventType, metadata } = req.body;
 
     if (!assessmentId || !eventType) {
@@ -142,7 +147,7 @@ export async function recordSuspiciousEvent(req: AuthRequest, res: Response) {
 
     const event = await prisma.suspiciousEvent.create({
       data: {
-        studentId,
+        studentId: effectiveUserId,
         assessmentId,
         eventType, // "TAB_SWITCH" | "WINDOW_BLUR" | "FULLSCREEN_EXIT" | "PASTE_ATTEMPT" | "COPY_ATTEMPT"
         metadata: typeof metadata === 'object' ? JSON.stringify(metadata) : metadata,
@@ -151,7 +156,7 @@ export async function recordSuspiciousEvent(req: AuthRequest, res: Response) {
 
     // Increment suspicious count on attempt
     await prisma.assessmentAttempt.updateMany({
-      where: { assessmentId, studentId },
+      where: { assessmentId, studentId: { in: studentIdsToMatch } },
       data: { suspiciousEventsCount: { increment: 1 } },
     });
 

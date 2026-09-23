@@ -196,10 +196,10 @@ model Submission {
   assessment      Assessment?            @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
   questionId      String
   question        Question               @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  sourceCode      String
+  sourceCode      String                 @map("code")
   language        String                 // "python", "java", "c", "cpp"
   status          String                 @default("PENDING") // "ACCEPTED", "WRONG_ANSWER", "COMPILATION_ERROR", "RUNTIME_ERROR", "TIME_LIMIT_EXCEEDED"
-  marks           Float                  @default(0.0)
+  marks           Float                  @default(0.0) @map("score")
   executionTime   Int                    @default(0) // ms
   memoryUsed      Int                    @default(0) // KB
   testCasesPassed Int                    @default(0)

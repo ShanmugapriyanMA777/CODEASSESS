@@ -205,6 +205,7 @@ export async function login(req: Request, res: Response) {
           dob: meta.dob,
           department: 'Computer Science & Engineering',
           semester: 6,
+          batchId: '652cb70f-6122-4711-85ab-0a40db7086b4',
         },
         adminProfile: null,
       };
@@ -487,7 +488,7 @@ export async function register(req: Request, res: Response) {
               studentProfile: {
                 create: {
                   rollNumber: rollNumber || `STD-${Date.now().toString().slice(-6)}`,
-                  batchId: batchId || null,
+                  batchId: batchId || '652cb70f-6122-4711-85ab-0a40db7086b4',
                   department: department || 'Computer Science & Engineering',
                 },
               },
