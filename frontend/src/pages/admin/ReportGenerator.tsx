@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import { User, Assessment, Batch } from '../../types';
 import {
@@ -22,8 +23,16 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-export const ReportGenerator: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'statement' | 'feedback' | 'individual'>('statement');
+interface ReportGeneratorProps {
+  defaultTab?: 'statement' | 'feedback' | 'individual';
+}
+
+export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ defaultTab }) => {
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab') as 'statement' | 'feedback' | 'individual' | null;
+  const initialTab = defaultTab || urlTab || 'statement';
+
+  const [activeTab, setActiveTab] = useState<'statement' | 'feedback' | 'individual'>(initialTab);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [students, setStudents] = useState<User[]>([]);

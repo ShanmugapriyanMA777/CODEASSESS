@@ -613,10 +613,10 @@ export const AssessmentTake: React.FC = () => {
 
           <button
             onClick={() => setFinishModalOpen(true)}
-            className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 whitespace-nowrap cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md shadow-emerald-600/20 whitespace-nowrap cursor-pointer"
           >
-            <span className="hidden sm:inline">Finish Assessment</span>
-            <span className="sm:hidden">Finish</span>
+            <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+            <span>Submit Assignment & Feedback</span>
           </button>
         </div>
       </header>
@@ -781,6 +781,15 @@ export const AssessmentTake: React.FC = () => {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                onClick={() => setFinishModalOpen(true)}
+                className="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center space-x-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/40 cursor-pointer whitespace-nowrap ml-1"
+                title="Mandatory Training Feedback before submission"
+              >
+                <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                <span>Feedback ({ratedCount}/5)</span>
+              </button>
             </div>
 
             <div className="flex items-center space-x-1 pl-2">
@@ -791,13 +800,24 @@ export const AssessmentTake: React.FC = () => {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button
-                disabled={currentQuestionIndex === questions.length - 1}
-                onClick={() => setCurrentQuestionIndex((i) => Math.min(questions.length - 1, i + 1))}
-                className="p-1.5 rounded hover:bg-slate-800 disabled:opacity-30"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              {currentQuestionIndex < questions.length - 1 ? (
+                <button
+                  onClick={() => setCurrentQuestionIndex((i) => Math.min(questions.length - 1, i + 1))}
+                  className="p-1.5 rounded hover:bg-slate-800"
+                  title="Next Question"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setFinishModalOpen(true)}
+                  className="flex items-center space-x-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm ml-1 cursor-pointer"
+                  title="Proceed to Training Feedback and Submission"
+                >
+                  <span>Feedback</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -869,6 +889,16 @@ export const AssessmentTake: React.FC = () => {
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>{isSubmitting ? 'Evaluating...' : 'Submit Code'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFinishModalOpen(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer"
+                  title="Complete assessment and open mandatory training feedback"
+                >
+                  <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                  <span>Submit Assessment</span>
                 </button>
               </div>
             </div>

@@ -140,6 +140,7 @@ export const App: React.FC = () => {
         <Route path="results" element={<ResultList />} />
         <Route path="submissions" element={<SubmissionList />} />
         <Route path="reports" element={<ReportGenerator />} />
+        <Route path="feedback" element={<ReportGenerator defaultTab="feedback" />} />
         <Route path="audit-logs" element={<AuditLogView />} />
       </Route>
 

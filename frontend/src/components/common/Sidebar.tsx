@@ -16,6 +16,7 @@ import {
   History,
   UserCheck,
   X,
+  Star,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -35,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     { label: 'Results & Rankings', path: '/admin/results', icon: Award },
     { label: 'Submissions Feed', path: '/admin/submissions', icon: History },
     { label: 'Reports & Mark Sheets', path: '/admin/reports', icon: FileText },
+    { label: 'Training Feedback', path: '/admin/feedback', icon: Star },
     { label: 'Audit Trail', path: '/admin/audit-logs', icon: ShieldAlert },
   ];
 
