@@ -105,61 +105,115 @@ export class PdfReportService {
       const successColor = '#059669'; // emerald-600
       const grayText = '#475569';     // slate-600
 
-      // HEADER BANNER
-      doc.rect(0, 0, 595.28, 90).fill(primaryColor);
+      // TOP INSTITUTIONAL LOGO (Agni College of Technology)
+      let logoPath = path.resolve(process.cwd(), 'assets', 'agni_logo.png');
+      if (!fs.existsSync(logoPath)) {
+        logoPath = path.resolve(process.cwd(), 'backend', 'assets', 'agni_logo.png');
+      }
+      try {
+        doc.image(logoPath, 36, 16, { width: 523 });
+      } catch (e: any) {
+        console.warn('Logo image not found or failed to load:', e.message);
+      }
 
-      // Title & Subtitle
-      doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold')
-        .text('ONLINE CODING ASSESSMENT PLATFORM', 36, 22);
-      doc.fillColor('#94a3b8').fontSize(9).font('Helvetica')
-        .text('Official Examination & Automated Evaluation Performance Report', 36, 42);
+      // Institutional Header Details (Centered below logo)
+      doc.font('Helvetica-Bold').fontSize(11).fillColor('#002b66')
+        .text('Agni College of Technology', 36, 62, { align: 'center', width: 523 });
+      doc.font('Helvetica').fontSize(8).fillColor('#334155')
+        .text('(An Autonomous Institution)', 36, 75, { align: 'center', width: 523 });
+      doc.fontSize(6.5).fillColor('#475569')
+        .text('Accredited by NBA, NAAC with A+ Grade, Estd. 2001, Approved by AICTE, New Delhi, Affiliated to Anna University, Chennai', 36, 85, { align: 'center', width: 523 });
+      doc.text('OMR, Chennai | 044-4997 2900 | 94450 54081 | www.act.edu.in', 36, 94, { align: 'center', width: 523 });
 
-      // Report ID & Date
-      doc.fillColor('#38bdf8').fontSize(8).font('Helvetica-Bold')
-        .text(`REPORT REF: CAP-${Date.now().toString(36).toUpperCase()}`, 400, 24, { align: 'right' });
-      doc.fillColor('#94a3b8').fontSize(8).font('Helvetica')
-        .text(`Generated: ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`, 400, 38, { align: 'right' });
+      // Dividing Line
+      doc.moveTo(36, 105).lineTo(559, 105).lineWidth(0.5).strokeColor('#cbd5e1').stroke();
 
-      // STUDENT PROFILE CARD
-      let currentY = 105;
-      doc.rect(36, currentY, 523, 72).fill(lightBg).strokeColor(borderColor).lineWidth(1).stroke();
+      // Title Bar (Centered Title + Subtitle, Right-aligned Ref/Date)
+      doc.font('Helvetica-Bold').fontSize(13).fillColor('#1e40af')
+        .text('ASSESSMENT REPORT', 36, 110, { align: 'center', width: 523 });
+      doc.font('Helvetica-Bold').fontSize(8).fillColor('#2563eb')
+        .text('ONLINE CODING ASSESSMENT PLATFORM', 36, 125, { align: 'center', width: 523 });
 
-      doc.fillColor(primaryColor).fontSize(10).font('Helvetica-Bold')
-        .text('STUDENT PROFILE & ACADEMIC INFORMATION', 48, currentY + 10);
+      doc.font('Helvetica-Bold').fontSize(7).fillColor('#475569')
+        .text(`REPORT REF: CAP-${Date.now().toString(36).toUpperCase()}`, 400, 112, { align: 'right' });
+      doc.font('Helvetica').fontSize(7).fillColor('#64748b')
+        .text(`Generated: ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`, 400, 122, { align: 'right' });
 
-      const rollNumber = student.studentProfile?.rollNumber || 'N/A';
+      // STUDENT & ASSESSMENT DETAILS Card
+      let currentY = 138;
+      doc.rect(36, currentY, 523, 76).fill('#f8fafc').strokeColor('#bae6fd').lineWidth(0.75).stroke();
+
+      // Card Header Banner
+      doc.rect(36, currentY, 523, 18).fill('#eff6ff');
+      doc.fillColor('#0369a1').fontSize(8).font('Helvetica-Bold')
+        .text('STUDENT & ASSESSMENT DETAILS', 46, currentY + 5);
+
+      const rollNumber = student.studentProfile?.rollNumber || '312824104000';
       const batchName = student.studentProfile?.batch?.name || 'CSE - 2026';
-      const dept = student.studentProfile?.department || 'Computer Science & Engineering';
+      const primaryAssessment = filteredResults[0]?.assessment;
+      const topicName = primaryAssessment?.title || 'Advanced Data Structures & Algorithms';
+      const completionTime = filteredResults[0]
+        ? `${Math.floor(filteredResults[0].timeTaken / 60)}m ${filteredResults[0].timeTaken % 60}s`
+        : '00:45:00';
+      const scoreDisplay = filteredResults[0]
+        ? `${filteredResults[0].obtainedMarks} / ${filteredResults[0].totalMarks}`
+        : `${totalMarksObtained} / ${totalMarksPossible}`;
+      const facultyName = 'Mrs. VARSHA';
+      const assessmentDate = filteredResults[0]
+        ? new Date(filteredResults[0].submittedAt).toLocaleDateString('en-GB')
+        : new Date().toLocaleDateString('en-GB');
 
-      doc.font('Helvetica').fontSize(9).fillColor(grayText);
-      doc.text(`Candidate Name: `, 48, currentY + 28);
-      doc.font('Helvetica-Bold').fillColor(primaryColor).text(student.name, 130, currentY + 28);
+      // Left Column
+      doc.font('Helvetica').fontSize(7.5).fillColor('#475569');
+      doc.text('Student Name', 46, currentY + 24);
+      doc.text(':', 155, currentY + 24);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(student.name, 165, currentY + 24);
 
-      doc.font('Helvetica').fillColor(grayText).text(`Roll Number: `, 48, currentY + 44);
-      doc.font('Helvetica-Bold').fillColor(primaryColor).text(rollNumber, 130, currentY + 44);
+      doc.font('Helvetica').fillColor('#475569').text('Register Number', 46, currentY + 36);
+      doc.text(':', 155, currentY + 36);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(rollNumber, 165, currentY + 36);
 
-      doc.font('Helvetica').fillColor(grayText).text(`Email ID: `, 300, currentY + 28);
-      doc.font('Helvetica-Bold').fillColor(primaryColor).text(student.email, 360, currentY + 28);
+      doc.font('Helvetica').fillColor('#475569').text('Class / Section', 46, currentY + 48);
+      doc.text(':', 155, currentY + 48);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(batchName, 165, currentY + 48);
 
-      doc.font('Helvetica').fillColor(grayText).text(`Batch / Dept: `, 300, currentY + 44);
-      doc.font('Helvetica-Bold').fillColor(primaryColor).text(`${batchName} | ${dept}`, 360, currentY + 44);
+      doc.font('Helvetica').fillColor('#475569').text('Assessment Topic / Subject', 46, currentY + 60);
+      doc.text(':', 155, currentY + 60);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(topicName.slice(0, 24), 165, currentY + 60);
+
+      // Right Column
+      doc.font('Helvetica').fillColor('#475569').text('Assessment Date', 310, currentY + 24);
+      doc.text(':', 395, currentY + 24);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(assessmentDate, 405, currentY + 24);
+
+      doc.font('Helvetica').fillColor('#475569').text('Completion Time', 310, currentY + 36);
+      doc.text(':', 395, currentY + 36);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(completionTime, 405, currentY + 36);
+
+      doc.font('Helvetica').fillColor('#475569').text('Assessment Score', 310, currentY + 48);
+      doc.text(':', 395, currentY + 48);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(scoreDisplay, 405, currentY + 48);
+
+      doc.font('Helvetica').fillColor('#475569').text('Faculty Name', 310, currentY + 60);
+      doc.text(':', 395, currentY + 60);
+      doc.font('Helvetica-Bold').fillColor('#0f172a').text(facultyName, 405, currentY + 60);
 
       // PERFORMANCE SCORECARDS (4 Grid Cards)
-      currentY = 190;
+      currentY = 222;
       const cardWidth = 124;
-      const cardHeight = 55;
+      const cardHeight = 46;
       const metrics = [
         { label: 'OVERALL AVERAGE', val: `${avgPercentage.toFixed(1)}%`, color: accentColor },
         { label: 'TESTS COMPLETED', val: `${completedAssessments}`, color: primaryColor },
         { label: 'TEST CASE ACCURACY', val: `${accuracy.toFixed(1)}%`, color: successColor },
-        { label: 'PROBLEMS SOLVED', val: `${totalQuestionsSolved} / ${totalQuestionsAttempted}`, color: '#7c3aed' },
+        { label: 'PROBLEMS SOLVED', val: `${totalQuestionsSolved} / ${Math.max(1, totalQuestionsAttempted)}`, color: '#7c3aed' },
       ];
 
       metrics.forEach((m, idx) => {
         const x = 36 + idx * (cardWidth + 9);
-        doc.rect(x, currentY, cardWidth, cardHeight).fill('#ffffff').strokeColor(borderColor).lineWidth(1).stroke();
-        doc.fillColor('#64748b').fontSize(7).font('Helvetica-Bold').text(m.label, x + 8, currentY + 10);
-        doc.fillColor(m.color).fontSize(14).font('Helvetica-Bold').text(m.val, x + 8, currentY + 25);
+        doc.rect(x, currentY, cardWidth, cardHeight).fill('#ffffff').strokeColor('#e2e8f0').lineWidth(1).stroke();
+        doc.fillColor('#64748b').fontSize(6.5).font('Helvetica-Bold').text(m.label, x + 8, currentY + 8);
+        doc.fillColor(m.color).fontSize(13).font('Helvetica-Bold').text(m.val, x + 8, currentY + 22);
       });
 
       // SECTION: ASSESSMENT RESULTS TABLE
@@ -406,8 +460,8 @@ export class PdfReportService {
   }
 
   /**
-   * Generates official Agni College of Technology "PORTAL MARK ENTRY STATEMENT"
-   * with custom 5 columns: S.NO, REGISTER NUMBER, NAME OF THE STUDENT, ASSIGNMENT COMPLETION, SCORE
+   * Generates official Agni College of Technology "ASSESSMENT REPORT"
+   * with exact 6 columns: S.NO, REGISTER NUMBER, NAME OF THE STUDENT, TEST MARKS, PASS/FAIL, ATTENDED HOURS
    */
   async generateClassStatementPdf(options: {
     institutionName?: string;
@@ -419,6 +473,8 @@ export class PdfReportService {
     programme?: string;
     batchSec?: string;
     dateOfEntry?: string;
+    assessmentDate?: string;
+    conducted?: string;
     facultyName?: string;
     subjectName?: string;
     subjectCode?: string;
@@ -426,22 +482,24 @@ export class PdfReportService {
       sNo: number;
       registerNumber: string;
       studentName: string;
-      assignmentCompletion: string;
-      score: string | number;
+      testMarks: string | number;
+      passFail: string;
+      attendedHours: string | number;
+      assignmentCompletion?: string;
+      score?: string | number;
     }>;
   }): Promise<Buffer> {
     const institutionName = options.institutionName || 'AGNI COLLEGE OF TECHNOLOGY';
     const subHeader = options.subHeader || '(An Autonomous Institution, Affiliated to Anna University, Chennai.)';
     const accreditation = options.accreditation || "Approved by AICTE, Accredited by NAAC with 'A+' Grade";
     const location = options.location || 'OMR, Navalur, Thalambur, Chennai.-600130';
-    const statementTitle = options.statementTitle || 'ODD SEMESTER - 2026';
-    const statementSub = options.statementSub || 'PORTAL MARK ENTRY STATEMENT';
-    const programme = options.programme || 'PROGRAMME : B.E. COMPUTER SCIENCE AND ENGINEERING';
-    const batchSec = options.batchSec || 'BATCH : 2024 - SEC. : C';
-    const dateOfEntry = options.dateOfEntry || new Date().toLocaleDateString('en-GB');
+    const programme = options.programme || 'B.E. COMPUTER SCIENCE AND ENGINEERING';
+    const batchSec = options.batchSec || '2024 / C';
+    const assessmentDate =
+      options.assessmentDate || options.dateOfEntry || new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+    const conducted = options.conducted || '2 Hours';
     const facultyName = options.facultyName || 'Mrs. VARSHA';
-    const subjectName = options.subjectName || 'COMPUTER NETWORKS';
-    const subjectCode = options.subjectCode || '24CS501';
+    const subjectName = options.subjectName || 'PROBLEM SOLVING AND PYTHON PROGRAMMING';
     const records = options.records || [];
 
     return new Promise((resolve, reject) => {
@@ -449,9 +507,9 @@ export class PdfReportService {
         margin: 36,
         size: 'A4',
         info: {
-          Title: `Portal Mark Entry Statement - ${subjectName}`,
+          Title: `Assessment Report - ${subjectName}`,
           Author: institutionName,
-          Subject: statementSub,
+          Subject: 'ASSESSMENT REPORT',
         },
       });
 
@@ -460,98 +518,130 @@ export class PdfReportService {
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', (err) => reject(err));
 
-      const drawHeader = (isFirstPage: boolean) => {
-        // Institutional Crest & Header (Image Logo)
+      const drawHeader = () => {
+        // Logo Image
         let logoPath = path.resolve(process.cwd(), 'assets', 'agni_logo.png');
         if (!fs.existsSync(logoPath)) {
-            logoPath = path.resolve(process.cwd(), 'backend', 'assets', 'agni_logo.png');
+          logoPath = path.resolve(process.cwd(), 'backend', 'assets', 'agni_logo.png');
         }
         try {
-          doc.image(logoPath, 36, 30, { width: 523 });
+          doc.image(logoPath, 36, 20, { width: 523 });
         } catch (e: any) {
           console.warn('Logo image not found or failed to load:', e.message);
         }
 
-        // Horizontal dividing line
-        doc.moveTo(36, 112).lineTo(559, 112).lineWidth(1).strokeColor('#000000').stroke();
+        // Institutional details below logo
+        doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000')
+          .text(institutionName, 36, 68, { align: 'center', width: 523 });
+        doc.font('Helvetica').fontSize(8.5).fillColor('#000000')
+          .text(subHeader, 36, 82, { align: 'center', width: 523 });
+        doc.text(accreditation, 36, 94, { align: 'center', width: 523 });
+        doc.text(location, 36, 106, { align: 'center', width: 523 });
 
-        // Metadata grid
-        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#000000');
-        doc.text(programme, 36, 122);
-        doc.text(batchSec, 380, 122, { align: 'right', width: 179 });
+        // Document Title
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000')
+          .text('ASSESSMENT REPORT', 36, 126, { align: 'center', width: 523 });
 
-        doc.font('Helvetica').fontSize(8.5);
-        doc.text(`Date of Entry  : ${dateOfEntry}`, 36, 136);
-        doc.text(`Name of the Faculty : ${facultyName}`, 340, 136, { align: 'right', width: 219 });
+        // Metadata 2-column, 3-row boxed grid (X: 36, Y: 144, width: 523, height: 48)
+        const boxY = 144;
+        doc.rect(36, boxY, 523, 48).strokeColor('#000000').lineWidth(0.75).stroke();
+        // Vertical divider in the middle
+        doc.moveTo(36 + 261.5, boxY).lineTo(36 + 261.5, boxY + 48).strokeColor('#000000').lineWidth(0.75).stroke();
+        // Horizontal dividers
+        doc.moveTo(36, boxY + 16).lineTo(559, boxY + 16).strokeColor('#000000').lineWidth(0.75).stroke();
+        doc.moveTo(36, boxY + 32).lineTo(559, boxY + 32).strokeColor('#000000').lineWidth(0.75).stroke();
 
-        doc.text(`Subject Name : ${subjectName}`, 36, 150);
-        // Subject Code removed per user request
+        doc.fontSize(8);
+        // Row 1
+        doc.font('Helvetica-Bold').text('PROGRAMME : ', 42, boxY + 4, { continued: true }).font('Helvetica').text(programme);
+        doc.font('Helvetica-Bold').text('BATCH / SEC. : ', 305, boxY + 4, { continued: true }).font('Helvetica').text(batchSec);
 
-        // Table Header
-        const tableY = 168;
-        doc.rect(36, tableY, 523, 24).fill('#f8fafc').strokeColor('#000000').lineWidth(0.75).stroke();
-        
-        doc.font('Helvetica-Bold').fontSize(8).fillColor('#000000');
-        doc.text('S.NO', 42, tableY + 8, { width: 35, align: 'center' });
-        doc.text('REGISTER NUMBER', 85, tableY + 8, { width: 120, align: 'left' });
-        doc.text('NAME OF THE STUDENT', 215, tableY + 8, { width: 170, align: 'left' });
-        doc.text('ASSIGNMENT COMPLETION', 390, tableY + 8, { width: 100, align: 'center' });
-        doc.text('SCORE', 495, tableY + 8, { width: 60, align: 'center' });
+        // Row 2
+        doc.font('Helvetica-Bold').text('Name of the Faculty : ', 42, boxY + 20, { continued: true }).font('Helvetica').text(facultyName);
+        doc.font('Helvetica-Bold').text('Subject Name : ', 305, boxY + 20, { continued: true }).font('Helvetica').text(subjectName);
 
-        return tableY + 24;
+        // Row 3
+        doc.font('Helvetica-Bold').text('ASSESSMENT DATE : ', 42, boxY + 36, { continued: true }).font('Helvetica').text(assessmentDate);
+        doc.font('Helvetica-Bold').text('Conducted : ', 305, boxY + 36, { continued: true }).font('Helvetica').text(conducted);
+
+        // Main Table Header (Y: 198, height: 26)
+        const tableY = 198;
+        doc.rect(36, tableY, 523, 26).strokeColor('#000000').lineWidth(0.75).stroke();
+
+        const colLines = [72, 177, 369, 429, 494];
+        colLines.forEach((x) => {
+          doc.moveTo(x, tableY).lineTo(x, tableY + 26).strokeColor('#000000').lineWidth(0.75).stroke();
+        });
+
+        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000');
+        doc.text('S.NO', 36, tableY + 9, { width: 36, align: 'center' });
+        doc.text('REGISTER NUMBER', 72, tableY + 9, { width: 105, align: 'center' });
+        doc.text('NAME OF THE STUDENT', 177, tableY + 9, { width: 192, align: 'center' });
+        doc.text('TEST MARKS', 369, tableY + 9, { width: 60, align: 'center' });
+        doc.text('PASS/FAIL', 429, tableY + 9, { width: 65, align: 'center' });
+        doc.text('ATTENDED\nHOURS', 494, tableY + 4, { width: 65, align: 'center' });
+
+        return tableY + 26;
       };
 
-      let currentY = drawHeader(true);
+      let currentY = drawHeader();
+      const rowHeight = 24;
+      const colLines = [72, 177, 369, 429, 494];
 
-      // Render table rows
-      records.forEach((row, index) => {
-        // Check page overflow
-        if (currentY > 740) {
+      // Draw rows (15 rows per page, matching template)
+      for (let i = 0; i < records.length; i++) {
+        if (i > 0 && i % 15 === 0) {
           doc.addPage();
-          currentY = drawHeader(false);
+          currentY = drawHeader();
         }
 
-        const rowHeight = 18;
-        // Draw row border
-        doc.rect(36, currentY, 523, rowHeight).fill(index % 2 === 0 ? '#ffffff' : '#fcfcfd').strokeColor('#e2e8f0').lineWidth(0.5).stroke();
+        const row = records[i];
+        doc.rect(36, currentY, 523, rowHeight).strokeColor('#000000').lineWidth(0.75).stroke();
+
+        colLines.forEach((x) => {
+          doc.moveTo(x, currentY).lineTo(x, currentY + rowHeight).strokeColor('#000000').lineWidth(0.75).stroke();
+        });
 
         doc.font('Helvetica').fontSize(8).fillColor('#000000');
-        doc.text(row.sNo.toString(), 42, currentY + 5, { width: 35, align: 'center' });
-        doc.font('Helvetica-Bold').text(row.registerNumber, 85, currentY + 5, { width: 120, align: 'left' });
-        doc.font('Helvetica').text(row.studentName, 215, currentY + 5, { width: 170, align: 'left' });
-        
-        // Completion status badge
-        const isComp = row.assignmentCompletion.toLowerCase().includes('complete');
-        doc.font(isComp ? 'Helvetica-Bold' : 'Helvetica')
-          .fillColor(isComp ? '#15803d' : '#b45309')
-          .text(row.assignmentCompletion, 390, currentY + 5, { width: 100, align: 'center' });
+        doc.text(row.sNo.toString(), 36, currentY + 7, { width: 36, align: 'center' });
+        doc.font('Helvetica-Bold').text(row.registerNumber, 72, currentY + 7, { width: 105, align: 'center' });
+        doc.font('Helvetica').text(row.studentName, 185, currentY + 7, { width: 176, align: 'left' });
 
-        // Score
-        const isScoreAb = row.score === 'AB' || row.score === '-';
+        const isAb = row.testMarks === 'AB' || row.testMarks === '-';
+        doc.font(isAb ? 'Helvetica' : 'Helvetica-Bold')
+          .text(row.testMarks.toString(), 369, currentY + 7, { width: 60, align: 'center' });
+
         doc.font('Helvetica-Bold')
-          .fillColor(isScoreAb ? '#dc2626' : '#000000')
-          .text(row.score.toString(), 495, currentY + 5, { width: 60, align: 'center' });
+          .text(row.passFail, 429, currentY + 7, { width: 65, align: 'center' });
+
+        doc.font('Helvetica')
+          .text(row.attendedHours.toString(), 494, currentY + 7, { width: 65, align: 'center' });
 
         currentY += rowHeight;
-      });
-
-      // Signature block at bottom
-      if (currentY > 700) {
-        doc.addPage();
-        currentY = 60;
-      } else {
-        currentY += 40;
       }
 
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('#000000');
-      doc.text(facultyName, 50, currentY);
-      doc.text('Signature of the HoD.', 420, currentY, { align: 'right', width: 139 });
-      
-      doc.font('Helvetica').fontSize(8).fillColor('#475569');
-      doc.text('Name of the Faculty', 50, currentY + 12);
+      // Pad remaining empty rows up to 15 on current page to match template
+      const rowsOnCurrentPage = records.length % 15 === 0 && records.length > 0 ? 15 : records.length % 15;
+      const emptyRowsNeeded = Math.max(0, 15 - rowsOnCurrentPage);
+      for (let j = 0; j < emptyRowsNeeded; j++) {
+        const nextSNo = records.length + j + 1;
+        doc.rect(36, currentY, 523, rowHeight).strokeColor('#000000').lineWidth(0.75).stroke();
+        colLines.forEach((x) => {
+          doc.moveTo(x, currentY).lineTo(x, currentY + rowHeight).strokeColor('#000000').lineWidth(0.75).stroke();
+        });
+        doc.font('Helvetica').fontSize(8).fillColor('#000000');
+        doc.text(nextSNo.toString(), 36, currentY + 7, { width: 36, align: 'center' });
+        currentY += rowHeight;
+      }
 
-      const footerCode = `${facultyName.replace(/[^a-zA-Z]/g, '').toUpperCase()}.CSE ${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')} ${new Date().toLocaleTimeString('en-US', { hour12: false })}`;
-      doc.fontSize(7).text(footerCode, 36, currentY + 36);
+      // Signature block at bottom
+      const sigY = 675;
+      doc.moveTo(48, sigY).lineTo(210, sigY).lineWidth(0.75).strokeColor('#000000').stroke();
+      doc.moveTo(380, sigY).lineTo(540, sigY).lineWidth(0.75).strokeColor('#000000').stroke();
+
+      doc.font('Helvetica').fontSize(8.5).fillColor('#000000');
+      doc.text('Name of the Faculty', 48, sigY + 6);
+      doc.text('Signature of the HoD.', 380, sigY + 6);
 
       doc.end();
     });

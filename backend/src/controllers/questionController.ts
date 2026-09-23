@@ -3,6 +3,8 @@ import { prisma } from '../prisma.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 import { logAuditEvent } from '../utils/audit.js';
+import { codeExecutionService } from '../services/codeExecutionService.js';
+import { evaluationService } from '../services/evaluationService.js';
 
 export async function getQuestions(req: AuthRequest, res: Response) {
   try {
@@ -272,5 +274,47 @@ export async function deleteQuestion(req: AuthRequest, res: Response) {
     return sendSuccess(res, null, 'Question deleted successfully');
   } catch (err: any) {
     return sendError(res, err.message || 'Failed to delete question', 500);
+  }
+}
+
+export async function testRunQuestionProgram(req: AuthRequest, res: Response) {
+  try {
+    const { language, sourceCode, input = '', expectedOutput } = req.body;
+
+    if (!language || !sourceCode) {
+      return sendError(res, 'Language and sourceCode are required', 400);
+    }
+
+    const execResult = await codeExecutionService.execute(language, sourceCode, input);
+
+    const normalizedActual = evaluationService.normalizeOutput(execResult.stdout || '');
+    const normalizedExpected =
+      expectedOutput !== undefined && expectedOutput !== null && expectedOutput.trim() !== ''
+        ? evaluationService.normalizeOutput(expectedOutput)
+        : null;
+
+    const isMatched =
+      normalizedExpected !== null
+        ? normalizedActual === normalizedExpected && execResult.status === 'Accepted'
+        : null;
+
+    return sendSuccess(
+      res,
+      {
+        status: execResult.status,
+        stdout: execResult.stdout,
+        stderr: execResult.stderr,
+        actualOutput: execResult.stdout || execResult.stderr,
+        expectedOutput: expectedOutput || '',
+        isMatched,
+        executionTime: execResult.executionTime,
+        memoryUsed: execResult.memoryUsed,
+        error: execResult.error,
+      },
+      'Program executed successfully'
+    );
+  } catch (err: any) {
+    console.error('Test run question program error:', err);
+    return sendError(res, err.message || 'Execution failed', 500);
   }
 }

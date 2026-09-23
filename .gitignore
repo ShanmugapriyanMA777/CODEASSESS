@@ -32,3 +32,5 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+fix_db.ts
+backend/fix_db.ts

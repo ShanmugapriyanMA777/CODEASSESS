@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   downloadStudentPdfReport,
+  getStudentReportPreview,
   downloadAssessmentPdfReport,
   getClassStatementData,
   downloadClassStatementCsv,
@@ -15,6 +16,7 @@ router.use(requireAuth);
 router.use(requireAdmin);
 
 router.get('/student/:studentId', downloadStudentPdfReport);
+router.get('/student/:studentId/preview', getStudentReportPreview);
 router.get('/assessment/:assessmentId', downloadAssessmentPdfReport);
 
 // Official Agni College of Technology Portal Mark Entry Statement endpoints
