@@ -896,11 +896,11 @@ export class PdfReportService {
 
             const kpiW = 523 / 5;
             const kpis = [
-              { label: 'Overall Skills', val: `${avgSkills} / 5 ★` },
-              { label: 'Concepts', val: `${avgConcepts} / 5 ★` },
-              { label: 'Problem Solving', val: `${avgSolving} / 5 ★` },
-              { label: 'Difficulty', val: `${avgDiff} / 5 ★` },
-              { label: 'Debugging', val: `${avgDebug} / 5 ★` },
+              { label: 'Overall Skills', val: `${avgSkills} / 5` },
+              { label: 'Concepts', val: `${avgConcepts} / 5` },
+              { label: 'Problem Solving', val: `${avgSolving} / 5` },
+              { label: 'Difficulty', val: `${avgDiff} / 5` },
+              { label: 'Debugging', val: `${avgDebug} / 5` },
             ];
 
             kpis.forEach((k, idx) => {
@@ -932,11 +932,11 @@ export class PdfReportService {
           doc.text('S.NO', 36, tableY + 8, { width: 28, align: 'center' });
           doc.text('REGISTER NO', 64, tableY + 8, { width: 80, align: 'center' });
           doc.text('STUDENT NAME', 144, tableY + 8, { width: 101, align: 'center' });
-          doc.text('SKILLS\n(1-5 ★)', 245, tableY + 4, { width: 40, align: 'center' });
-          doc.text('CONCEPTS\n(1-5 ★)', 285, tableY + 4, { width: 45, align: 'center' });
-          doc.text('SOLVING\n(1-5 ★)', 330, tableY + 4, { width: 45, align: 'center' });
-          doc.text('DIFF.\n(1-5 ★)', 375, tableY + 4, { width: 40, align: 'center' });
-          doc.text('DEBUG\n(1-5 ★)', 415, tableY + 4, { width: 40, align: 'center' });
+          doc.text('SKILLS\n(1-5)', 245, tableY + 6, { width: 40, align: 'center' });
+          doc.text('CONCEPTS\n(1-5)', 285, tableY + 6, { width: 45, align: 'center' });
+          doc.text('SOLVING\n(1-5)', 330, tableY + 6, { width: 45, align: 'center' });
+          doc.text('DIFF.\n(1-5)', 375, tableY + 6, { width: 40, align: 'center' });
+          doc.text('DEBUG\n(1-5)', 415, tableY + 6, { width: 40, align: 'center' });
           doc.text('SUGGESTIONS & IMPROVEMENTS', 455, tableY + 8, { width: 104, align: 'center' });
 
           return tableY + 24;
@@ -978,12 +978,12 @@ export class PdfReportService {
             doc.font('Helvetica-Bold').text(String(row.registerNumber || '312824104000'), 64, textY, { width: 80, align: 'center' });
             doc.font('Helvetica').text(String(row.studentName || 'STUDENT').toUpperCase(), 148, textY, { width: 94, align: 'left' });
 
-            // Ratings (Stars out of 5)
-            doc.font('Helvetica-Bold').text(`${row.overallSkills || 5}★`, 245, textY, { width: 40, align: 'center' });
-            doc.text(`${row.basicConcepts || 5}★`, 285, textY, { width: 45, align: 'center' });
-            doc.text(`${row.problemSolving || 5}★`, 330, textY, { width: 45, align: 'center' });
-            doc.text(`${row.difficultyLevel || 3}★`, 375, textY, { width: 40, align: 'center' });
-            doc.text(`${row.debuggingAbility || 5}★`, 415, textY, { width: 40, align: 'center' });
+            // Ratings (out of 5)
+            doc.font('Helvetica-Bold').text(`${row.overallSkills || 5} / 5`, 245, textY, { width: 40, align: 'center' });
+            doc.text(`${row.basicConcepts || 5} / 5`, 285, textY, { width: 45, align: 'center' });
+            doc.text(`${row.problemSolving || 5} / 5`, 330, textY, { width: 45, align: 'center' });
+            doc.text(`${row.difficultyLevel || 3} / 5`, 375, textY, { width: 40, align: 'center' });
+            doc.text(`${row.debuggingAbility || 5} / 5`, 415, textY, { width: 40, align: 'center' });
 
             // Suggestions text with word wrap
             doc.font('Helvetica').fontSize(6.5).text(sugText, 458, textY, { width: 98, align: 'left' });
