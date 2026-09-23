@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { RotateCcw, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { RotateCcw, AlertTriangle, ShieldAlert, Trash2 } from 'lucide-react';
 
 interface MonacoCodeEditorProps {
   value: string;
@@ -9,6 +9,7 @@ interface MonacoCodeEditorProps {
   language: string;
   onLanguageChange?: (language: string) => void;
   onReset?: () => void;
+  onClear?: () => void;
   disableCopyPaste?: boolean;
   onPasteBlocked?: () => void;
   readOnly?: boolean;
@@ -21,6 +22,7 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = ({
   language,
   onLanguageChange,
   onReset,
+  onClear,
   disableCopyPaste = false,
   onPasteBlocked,
   readOnly = false,
@@ -177,6 +179,18 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = ({
               A+
             </button>
           </div>
+
+          {onClear && !readOnly && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="flex items-center space-x-1 px-2 py-1 rounded bg-slate-800/80 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-transparent hover:border-rose-800/50 transition"
+              title="Clear all code in editor"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Clear</span>
+            </button>
+          )}
 
           {onReset && !readOnly && (
             <button

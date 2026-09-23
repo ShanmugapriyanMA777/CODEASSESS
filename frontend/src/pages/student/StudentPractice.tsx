@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { Question } from '../../types';
 import { MonacoCodeEditor } from '../../components/editor/MonacoCodeEditor';
-import { Code2, Play, CheckCircle, XCircle, Search, Filter, ArrowLeft } from 'lucide-react';
+import { Code2, Play, CheckCircle, XCircle, AlertTriangle, Search, Filter, ArrowLeft } from 'lucide-react';
 
 export const StudentPractice: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -39,15 +39,43 @@ export const StudentPractice: React.FC = () => {
     }
   };
 
+  const getDefaultStarter = (lang: string) => {
+    const l = (lang || '').toLowerCase();
+    if (l === 'python' || l === 'py') return '# Write your solution here\n';
+    if (l === 'javascript' || l === 'js') return '// Write your solution here\n';
+    if (l === 'java') return 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Write your solution here\n    }\n}\n';
+    if (l === 'c') return '#include <stdio.h>\n\nint main() {\n    // Write your solution here\n    return 0;\n}\n';
+    if (l === 'cpp' || l === 'c++') return '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}\n';
+    return '// Write your solution here\n';
+  };
+
   const selectQuestion = (q: Question) => {
     setSelectedQuestion(q);
     setShowMobileList(false);
     setTestResults([]);
     try {
       const starter = JSON.parse(q.starterCode || '{}');
-      setCode(starter[language] || starter.python || '// Write code here');
+      setCode(starter[language] || starter.python || getDefaultStarter(language));
     } catch (e) {
-      setCode('// Write code here');
+      setCode(getDefaultStarter(language));
+    }
+  };
+
+  const handleResetCode = () => {
+    if (!selectedQuestion) return;
+    if (window.confirm('Reset code to starter template? Your unsaved edits will be discarded.')) {
+      try {
+        const starter = JSON.parse(selectedQuestion.starterCode || '{}');
+        setCode(starter[language] || getDefaultStarter(language));
+      } catch (e) {
+        setCode(getDefaultStarter(language));
+      }
+    }
+  };
+
+  const handleClearCode = () => {
+    if (window.confirm('Clear all code in the editor?')) {
+      setCode('');
     }
   };
 
@@ -177,33 +205,106 @@ export const StudentPractice: React.FC = () => {
                 value={code}
                 onChange={setCode}
                 language={language}
+                onReset={handleResetCode}
+                onClear={handleClearCode}
                 onLanguageChange={(l) => {
                   setLanguage(l);
+                  if (!selectedQuestion) return;
                   try {
                     const starter = JSON.parse(selectedQuestion.starterCode || '{}');
-                    setCode(starter[l] || '');
-                  } catch (e) {}
+                    setCode(starter[l] || getDefaultStarter(l));
+                  } catch (e) {
+                    setCode(getDefaultStarter(l));
+                  }
                 }}
               />
             </div>
 
             {/* Test Results Console */}
             {testResults.length > 0 && (
-              <div className="h-44 border-t border-slate-800 bg-slate-950 p-3 overflow-y-auto font-mono text-xs space-y-2">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Sample Test Results:</span>
-                {testResults.map((tr, idx) => (
-                  <div key={idx} className="p-2 rounded bg-slate-900 border border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {tr.status === 'PASSED' ? (
-                        <CheckCircle className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-rose-400" />
+              <div className="h-60 border-t border-slate-800 bg-slate-950 p-3 overflow-y-auto text-xs space-y-3">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Sample Test Results:</span>
+                {testResults.map((tr, idx) => {
+                  const isPassed = tr.status === 'PASSED';
+                  const isError = tr.status === 'ERROR';
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-lg border transition-all ${
+                        isPassed
+                          ? 'bg-slate-900/90 border-emerald-900/40'
+                          : isError
+                          ? 'bg-slate-900/90 border-amber-900/40'
+                          : 'bg-slate-900/90 border-rose-900/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-semibold mb-2">
+                        <div className="flex items-center space-x-2">
+                          {isPassed ? (
+                            <CheckCircle className="w-4 h-4 text-emerald-400" />
+                          ) : isError ? (
+                            <AlertTriangle className="w-4 h-4 text-amber-400" />
+                          ) : (
+                            <XCircle className="w-4 h-4 text-rose-400" />
+                          )}
+                          <span className="text-white font-medium">Case {idx + 1}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              isPassed
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : isError
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                            }`}
+                          >
+                            {tr.status}
+                          </span>
+                        </div>
+                        <span className="text-slate-500 font-mono text-[10px]">{tr.executionTime}ms</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+                        <div>
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold block mb-0.5">Input</span>
+                          <pre className="p-2 bg-slate-950 border border-slate-800 rounded text-slate-300 font-mono whitespace-pre-wrap overflow-x-auto min-h-[38px]">
+                            {tr.input || '(empty)'}
+                          </pre>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold block mb-0.5">Expected Output</span>
+                          <pre className="p-2 bg-slate-950 border border-slate-800 rounded text-slate-300 font-mono whitespace-pre-wrap overflow-x-auto min-h-[38px]">
+                            {tr.expectedOutput || '(empty)'}
+                          </pre>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 uppercase font-semibold block mb-0.5">Actual Output</span>
+                          <pre
+                            className={`p-2 bg-slate-950 border rounded font-mono whitespace-pre-wrap overflow-x-auto min-h-[38px] ${
+                              isPassed
+                                ? 'text-emerald-400 border-emerald-900/50'
+                                : isError
+                                ? 'text-amber-400 border-amber-900/50'
+                                : 'text-rose-400 border-rose-900/50'
+                            }`}
+                          >
+                            {tr.actualOutput || (isError ? '(errored before output)' : '(no output)')}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {tr.error && (
+                        <div className="mt-2.5 pt-2 border-t border-slate-800/80">
+                          <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider block mb-1">
+                            Error Output / Traceback:
+                          </span>
+                          <pre className="p-2 bg-rose-950/30 border border-rose-900/50 rounded text-rose-300 text-[11px] font-mono whitespace-pre-wrap overflow-x-auto max-h-36">
+                            {tr.error}
+                          </pre>
+                        </div>
                       )}
-                      <span>Case {idx + 1}: {tr.status}</span>
                     </div>
-                    <span className="text-slate-500">{tr.executionTime}ms</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

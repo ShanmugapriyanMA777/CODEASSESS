@@ -86,6 +86,14 @@ async function main() {
   console.log(`✓ ${studentsData.length} Real Students seeded with DOB passwords.`);
 
   // 4. Create 15 Comprehensive Coding Questions
+  const cleanStarterCodeJson = JSON.stringify({
+    python: `# Write your solution here\n`,
+    javascript: `// Write your solution here\n`,
+    java: `import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Write your solution here\n    }\n}\n`,
+    c: `#include <stdio.h>\n\nint main() {\n    // Write your solution here\n    return 0;\n}\n`,
+    cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}\n`,
+  });
+
   const sampleQuestions = [
     {
       title: 'Find Largest Element',
@@ -1329,6 +1337,7 @@ int main() {
     const question = await prisma.question.create({
       data: {
         ...questionData,
+        starterCode: cleanStarterCodeJson,
         createdById: adminUser.id,
         testCases: {
           create: testCases,

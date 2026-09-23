@@ -120,10 +120,10 @@ export class EvaluationService {
         status: testStatus,
         input: tc.input,
         expectedOutput: tc.expectedOutput,
-        actualOutput: execResult.stdout || execResult.stderr,
+        actualOutput: execResult.stdout,
         executionTime: execResult.executionTime,
         memoryUsed: execResult.memoryUsed,
-        error: execResult.error,
+        error: execResult.error || execResult.stderr,
       });
     }
 
@@ -204,10 +204,10 @@ export class EvaluationService {
         // STRICT SECURITY: Never expose hidden test case input or expected output to students!
         input: tc.isHidden ? undefined : tc.input,
         expectedOutput: tc.isHidden ? undefined : tc.expectedOutput,
-        actualOutput: tc.isHidden ? undefined : (execResult.stdout || execResult.stderr),
+        actualOutput: tc.isHidden ? undefined : execResult.stdout,
         executionTime: execResult.executionTime,
         memoryUsed: execResult.memoryUsed,
-        error: tc.isHidden ? undefined : execResult.error,
+        error: tc.isHidden ? undefined : (execResult.error || execResult.stderr),
       });
     }
 
