@@ -796,18 +796,20 @@ export class PdfReportService {
           }
 
           // ── HEADER LAYOUT ──────────────────────────────────────────────────────
-          // Logo centered at top, text flows below — no overlap
-          const logoW = 460;  // wide banner logo
-          const logoX = 36 + (523 - logoW) / 2; // horizontally centered
+          // Logo: native size 715×108. At full page width 523px:
+          //   rendered height = 108 × (523/715) ≈ 79px
+          // Draw at x=36 (left margin), y=14. Content starts at y = 14+79+5 = 98.
+          const LOGO_DRAW_W = 523;
+          const LOGO_DRAW_H = Math.round(108 * (LOGO_DRAW_W / 715)); // ≈ 79
           const logoY = 14;
 
-          let headerTextStartY = 18; // default if no logo
+          let headerTextStartY = 18; // used only when logo fails
 
           if (fs.existsSync(logoPath)) {
             try {
-              doc.image(logoPath, logoX, logoY, { width: logoW });
-              // Push text below the logo image (approx 55px tall at 460px wide)
-              headerTextStartY = logoY + 58;
+              doc.image(logoPath, 36, logoY, { width: LOGO_DRAW_W });
+              // Move cursor BELOW the rendered logo + 5px breathing room
+              headerTextStartY = logoY + LOGO_DRAW_H + 5; // = 98
             } catch (e) {
               // Logo failed — fall through to text-only header
             }
