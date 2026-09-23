@@ -848,13 +848,13 @@ export class PdfReportService {
           // Metadata box — positioned dynamically below the report title
           const boxY = reportTitleEndY + 4;
           const midX = 295;
-          const col1X = 42;
-          const col1W = 245;
-          const col2X = midX + 6;
-          const col2W = 250;
+          const col1X = 40;    // just inside left box border
+          const col1W = 255;   // left col usable width (40..295)
+          const col2X = midX + 4;
+          const col2W = 255;   // right col usable width (299..559 minus margin)
 
           const metaRows = 3;
-          const rowH = 17;
+          const rowH = 20;  // taller rows for readability
           const totalMetaH = metaRows * rowH;
 
           doc.rect(36, boxY, 523, totalMetaH).strokeColor('#000000').lineWidth(0.75).stroke();
@@ -865,47 +865,51 @@ export class PdfReportService {
           doc.moveTo(36, div1Y).lineTo(559, div1Y).strokeColor('#000000').lineWidth(0.5).stroke();
           doc.moveTo(36, div2Y).lineTo(559, div2Y).strokeColor('#000000').lineWidth(0.5).stroke();
 
-          // ── Row 1: PROGRAMME | BATCH/SEC ─────────────────────────────────────
-          // Use absolute x,y for every text call — NO continued:true to avoid cursor drift
-          const lbl1W = 90;  // label width col1
-          const val1X = col1X + lbl1W;
-          const val1W = col1W - lbl1W;
+          // ── Row layout (absolute x,y, no continued:true) ──────────────────────
+          // Col1: x=40..295, label in first 120pt, value in remaining 135pt
+          // Col2: x=301..559, label in first 115pt, value in remaining 143pt
+          const lbl1W = 120;
+          const val1X = col1X + lbl1W;      // = 160
+          const val1W = col1W - lbl1W;      // = 125
 
-          const lbl2W = 90;  // label width col2
-          const val2X = col2X + lbl2W;
-          const val2W = col2W - lbl2W;
+          const lbl2W = 115;
+          const val2X = col2X + lbl2W;      // = 416
+          const val2W = col2W - lbl2W;      // = 135
+
+          const rowPad = 6;  // vertical padding inside each row
+
+          // ── Row 1: PROGRAMME | BATCH / SEC ───────────────────────────────────
+          doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
+            .text('PROGRAMME :', col1X, boxY + rowPad, { lineBreak: false });
+          doc.font('Helvetica').fontSize(7.5).fillColor('#000000')
+            .text(programme, val1X, boxY + rowPad, { width: val1W, lineBreak: false });
 
           doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-            .text('PROGRAMME :', col1X, boxY + 5, { width: lbl1W, lineBreak: false });
+            .text('BATCH / SEC. :', col2X, boxY + rowPad, { lineBreak: false });
           doc.font('Helvetica').fontSize(7.5).fillColor('#000000')
-            .text(programme, val1X, boxY + 5, { width: val1W, lineBreak: false });
-
-          doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-            .text('BATCH / SEC. :', col2X, boxY + 5, { width: lbl2W, lineBreak: false });
-          doc.font('Helvetica').fontSize(7.5).fillColor('#000000')
-            .text(batchSec, val2X, boxY + 5, { width: val2W, lineBreak: false });
+            .text(batchSec, val2X, boxY + rowPad, { width: val2W, lineBreak: false });
 
           // ── Row 2: FACULTY | SUBJECT ──────────────────────────────────────────
           doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-            .text('Name of Faculty :', col1X, div1Y + 5, { width: lbl1W, lineBreak: false });
+            .text('Name of Faculty :', col1X, div1Y + rowPad, { lineBreak: false });
           doc.font('Helvetica').fontSize(7.5).fillColor('#000000')
-            .text(facultyName, val1X, div1Y + 5, { width: val1W, lineBreak: false });
+            .text(facultyName, val1X, div1Y + rowPad, { width: val1W, lineBreak: false });
 
           doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-            .text('Subject Name :', col2X, div1Y + 5, { width: lbl2W, lineBreak: false });
+            .text('Subject Name :', col2X, div1Y + rowPad, { lineBreak: false });
           doc.font('Helvetica').fontSize(7.5).fillColor('#000000')
-            .text(subjectName, val2X, div1Y + 5, { width: val2W, lineBreak: false });
+            .text(subjectName, val2X, div1Y + rowPad, { width: val2W, lineBreak: false });
 
           // ── Row 3: ASSESSMENT DATE | CONDUCTED ───────────────────────────────
           doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-            .text('ASSESSMENT DATE :', col1X, div2Y + 5, { width: lbl1W, lineBreak: false });
+            .text('ASSESSMENT DATE :', col1X, div2Y + rowPad, { lineBreak: false });
           doc.font('Helvetica').fontSize(7.5).fillColor('#000000')
-            .text(assessmentDate, val1X, div2Y + 5, { width: val1W, lineBreak: false });
+            .text(assessmentDate, val1X, div2Y + rowPad, { width: val1W, lineBreak: false });
 
           doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-            .text('Conducted :', col2X, div2Y + 5, { width: lbl2W, lineBreak: false });
+            .text('Conducted :', col2X, div2Y + rowPad, { lineBreak: false });
           doc.font('Helvetica').fontSize(7.5).fillColor('#000000')
-            .text(conducted, val2X, div2Y + 5, { width: val2W, lineBreak: false });
+            .text(conducted, val2X, div2Y + rowPad, { width: val2W, lineBreak: false });
 
 
           let nextY = boxY + totalMetaH + 6;
