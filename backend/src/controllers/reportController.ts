@@ -725,82 +725,8 @@ async function buildClassFeedbackPayload(req: AuthRequest) {
     }
   } catch (_) {}
 
-  // Source D: If records are still empty, synthesize realistic feedback for enrolled students
-  if (recordsMap.size === 0) {
-    try {
-      // Fetch students from Supabase or Prisma
-      let studentList: any[] = [];
-      const { data: suUsers } = await supabase
-        .from('User')
-        .select('id, name, email')
-        .eq('role', 'STUDENT')
-        .order('name', { ascending: true })
-        .limit(30);
-
-      const { data: suProfiles } = await supabase
-        .from('StudentProfile')
-        .select('userId, rollNumber, batchId');
-
-      const profileMap = new Map<string, any>();
-      if (suProfiles) {
-        suProfiles.forEach((p: any) => profileMap.set(p.userId, p));
-      }
-
-      if (suUsers && suUsers.length > 0) {
-        studentList = suUsers.map((u: any) => {
-          const prof = profileMap.get(u.id);
-          return {
-            id: u.id,
-            name: u.name,
-            rollNumber: prof?.rollNumber || (u.id.startsWith('u-std-') ? u.id.replace('u-std-', '') : '312824104000'),
-            batchId: prof?.batchId,
-          };
-        });
-      } else {
-        const localStudents = await prisma.user.findMany({
-          where: { role: 'STUDENT' },
-          include: { studentProfile: true },
-          take: 30,
-        });
-        studentList = localStudents.map((u: any) => ({
-          id: u.id,
-          name: u.name,
-          rollNumber: u.studentProfile?.rollNumber || '312824104000',
-          batchId: u.studentProfile?.batchId,
-        }));
-      }
-
-      // Filter by batch if specified
-      if (batch?.id) {
-        const filtered = studentList.filter((s) => s.batchId === batch.id);
-        if (filtered.length > 0) studentList = filtered;
-      }
-
-      studentList.forEach((s, idx) => {
-        const q1 = ((idx * 7 + 3) % 3) + 3; // 3 to 5
-        const q2 = ((idx * 5 + 4) % 2) + 4; // 4 to 5
-        const q3 = ((idx * 3 + 2) % 3) + 3; // 3 to 5
-        const q4 = ((idx * 2 + 3) % 2) + 3; // 3 to 4
-        const q5 = ((idx * 11 + 4) % 3) + 3; // 3 to 5
-        const suggestions = DEFAULT_FEEDBACK_SUGGESTIONS[idx % DEFAULT_FEEDBACK_SUGGESTIONS.length];
-
-        recordsMap.set(s.id, {
-          id: `fb-synth-${idx + 1}`,
-          studentId: s.id,
-          registerNumber: s.rollNumber,
-          studentName: s.name.toUpperCase(),
-          overallSkills: q1,
-          basicConcepts: q2,
-          problemSolving: q3,
-          difficultyLevel: q4,
-          debuggingAbility: q5,
-          suggestions,
-          submittedAt: new Date(Date.now() - idx * 1800000).toISOString(),
-          batchId: s.batchId,
-        });
-      });
-    } catch (_) {}
-  }
+  // NOTE: Source D (synthetic fallback) has been removed.
+  // Only real student submissions from Sources A, B, C are displayed.
 
   // Convert map to sorted records array
   let rawRecords = Array.from(recordsMap.values());
