@@ -4,6 +4,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 import { evaluationService } from '../services/evaluationService.js';
 import { resolveStudentDetails } from './assessmentController.js';
+import { isCannedSolution } from '../utils/starterCodeUtils.js';
 
 export async function runSampleCode(req: AuthRequest, res: Response) {
   try {
@@ -104,11 +105,16 @@ export async function autoSaveDraft(req: AuthRequest, res: Response) {
     }
 
     if (questionId && code !== undefined) {
-      currentDrafts[questionId] = {
-        code,
-        language: language || 'python',
-        updatedAt: new Date().toISOString(),
-      };
+      if (!isCannedSolution(code)) {
+        currentDrafts[questionId] = {
+          code,
+          language: language || 'python',
+          updatedAt: new Date().toISOString(),
+        };
+      } else {
+        // If code is canned solution, purge it from draft
+        delete currentDrafts[questionId];
+      }
     }
 
     if (attempt) {

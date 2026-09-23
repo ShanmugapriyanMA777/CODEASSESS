@@ -4,6 +4,7 @@ import { supabase } from '../config/supabase.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 import { logAuditEvent } from '../utils/audit.js';
+import { isCannedSolution, cleanStarterTemplates } from '../utils/starterCodeUtils.js';
 
 export async function resolveStudentDetails(studentId: string, email?: string) {
   let profile = await prisma.studentProfile.findFirst({
@@ -305,9 +306,51 @@ export async function getAssessmentById(req: AuthRequest, res: Response) {
       return sendError(res, 'Assessment not found', 404);
     }
 
+    // Sanitize question starter codes so predefined solutions never reach the client
+    if (assessment.questions && Array.isArray(assessment.questions)) {
+      for (const aq of assessment.questions) {
+        if (aq.question && aq.question.starterCode) {
+          try {
+            const parsed = JSON.parse(aq.question.starterCode);
+            let hasCanned = false;
+            for (const lang of Object.keys(parsed)) {
+              if (isCannedSolution(parsed[lang])) {
+                hasCanned = true;
+                break;
+              }
+            }
+            if (hasCanned) {
+              aq.question.starterCode = JSON.stringify(cleanStarterTemplates);
+            }
+          } catch (_) {
+            aq.question.starterCode = JSON.stringify(cleanStarterTemplates);
+          }
+        }
+      }
+    }
+
     // If student, check if expired or validate attempt
     if (isStudent && studentId) {
       let attempt = assessment.attempts?.[0];
+
+      // Sanitize attempt drafts so old canned solutions are never served
+      if (attempt && attempt.currentCodeDraftsJson) {
+        try {
+          const drafts = JSON.parse(attempt.currentCodeDraftsJson);
+          let modified = false;
+          for (const qId of Object.keys(drafts)) {
+            if (isCannedSolution(drafts[qId]?.code)) {
+              delete drafts[qId];
+              modified = true;
+            }
+          }
+          if (modified) {
+            attempt.currentCodeDraftsJson = JSON.stringify(drafts);
+          }
+        } catch (_) {
+          attempt.currentCodeDraftsJson = '{}';
+        }
+      }
 
       // If no attempt yet and assessment is open, create or initialize attempt
       if (!attempt) {

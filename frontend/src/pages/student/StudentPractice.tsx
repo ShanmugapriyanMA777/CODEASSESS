@@ -4,6 +4,28 @@ import { Question } from '../../types';
 import { MonacoCodeEditor } from '../../components/editor/MonacoCodeEditor';
 import { Code2, Play, CheckCircle, XCircle, AlertTriangle, Search, Filter, ArrowLeft } from 'lucide-react';
 
+const CANNED_SIGNATURES = [
+  'def solve():',
+  'sys.stdin.readline()',
+  'sys.stdin.read().split()',
+  'print("Not Prime")',
+  'print("Prime")',
+  'print(max(arr))',
+  'print(s[::-1])',
+  'print("Palindrome")',
+  'seen[num] = i',
+  'max_val = INT_MIN',
+  'int max = -2147483648',
+  'maxVal = Integer.MIN_VALUE',
+  'Scanner sc = new Scanner(System.in)',
+  'unordered_map<int, int> seen',
+];
+
+const isCannedSolution = (code?: string | null) => {
+  if (!code) return false;
+  return CANNED_SIGNATURES.some((sig) => code.includes(sig));
+};
+
 export const StudentPractice: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
@@ -55,7 +77,12 @@ export const StudentPractice: React.FC = () => {
     setTestResults([]);
     try {
       const starter = JSON.parse(q.starterCode || '{}');
-      setCode(starter[language] || starter.python || getDefaultStarter(language));
+      const candidate = starter[language] || starter.python;
+      if (candidate && !isCannedSolution(candidate)) {
+        setCode(candidate);
+      } else {
+        setCode(getDefaultStarter(language));
+      }
     } catch (e) {
       setCode(getDefaultStarter(language));
     }
@@ -64,12 +91,7 @@ export const StudentPractice: React.FC = () => {
   const handleResetCode = () => {
     if (!selectedQuestion) return;
     if (window.confirm('Reset code to starter template? Your unsaved edits will be discarded.')) {
-      try {
-        const starter = JSON.parse(selectedQuestion.starterCode || '{}');
-        setCode(starter[language] || getDefaultStarter(language));
-      } catch (e) {
-        setCode(getDefaultStarter(language));
-      }
+      setCode(getDefaultStarter(language));
     }
   };
 
@@ -212,7 +234,12 @@ export const StudentPractice: React.FC = () => {
                   if (!selectedQuestion) return;
                   try {
                     const starter = JSON.parse(selectedQuestion.starterCode || '{}');
-                    setCode(starter[l] || getDefaultStarter(l));
+                    const candidate = starter[l];
+                    if (candidate && !isCannedSolution(candidate)) {
+                      setCode(candidate);
+                    } else {
+                      setCode(getDefaultStarter(l));
+                    }
                   } catch (e) {
                     setCode(getDefaultStarter(l));
                   }

@@ -19,6 +19,28 @@ import {
   FileText,
 } from 'lucide-react';
 
+const CANNED_SIGNATURES = [
+  'def solve():',
+  'sys.stdin.readline()',
+  'sys.stdin.read().split()',
+  'print("Not Prime")',
+  'print("Prime")',
+  'print(max(arr))',
+  'print(s[::-1])',
+  'print("Palindrome")',
+  'seen[num] = i',
+  'max_val = INT_MIN',
+  'int max = -2147483648',
+  'maxVal = Integer.MIN_VALUE',
+  'Scanner sc = new Scanner(System.in)',
+  'unordered_map<int, int> seen',
+];
+
+const isCannedSolution = (code?: string | null) => {
+  if (!code) return false;
+  return CANNED_SIGNATURES.some((sig) => code.includes(sig));
+};
+
 export const AssessmentTake: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -68,10 +90,16 @@ export const AssessmentTake: React.FC = () => {
             setSecondsRemaining(ass.currentAttempt.remainingSeconds);
             setSuspiciousCount(ass.currentAttempt.suspiciousEventsCount || 0);
 
-            // Restore drafts
+            // Restore drafts (filtering out any old canned solutions)
             try {
               const parsed = JSON.parse(ass.currentAttempt.currentCodeDraftsJson || '{}');
-              setCodeDrafts(parsed);
+              const cleanDrafts: Record<string, any> = {};
+              for (const [k, v] of Object.entries(parsed as Record<string, any>)) {
+                if (v && v.code && !isCannedSolution(v.code)) {
+                  cleanDrafts[k] = v;
+                }
+              }
+              setCodeDrafts(cleanDrafts);
             } catch (e) {
               // ignore
             }
@@ -99,7 +127,7 @@ export const AssessmentTake: React.FC = () => {
     if (!currentQuestion) return;
 
     const existingDraft = codeDrafts[currentQuestion.id];
-    if (existingDraft && existingDraft.code) {
+    if (existingDraft && existingDraft.code && !isCannedSolution(existingDraft.code)) {
       setCurrentCode(existingDraft.code);
       setCurrentLanguage(existingDraft.language || 'python');
     } else {
@@ -107,7 +135,12 @@ export const AssessmentTake: React.FC = () => {
       try {
         const starter = JSON.parse(currentQuestion.starterCode || '{}');
         const lang = currentLanguage || 'python';
-        setCurrentCode(starter[lang] || starter.python || getDefaultStarter(lang));
+        const candidate = starter[lang] || starter.python;
+        if (candidate && !isCannedSolution(candidate)) {
+          setCurrentCode(candidate);
+        } else {
+          setCurrentCode(getDefaultStarter(lang));
+        }
       } catch (e) {
         setCurrentCode(getDefaultStarter(currentLanguage || 'python'));
       }
@@ -235,7 +268,12 @@ export const AssessmentTake: React.FC = () => {
     if (!currentQuestion) return;
     try {
       const starter = JSON.parse(currentQuestion.starterCode || '{}');
-      setCurrentCode(starter[lang] || getDefaultStarter(lang));
+      const candidate = starter[lang];
+      if (candidate && !isCannedSolution(candidate)) {
+        setCurrentCode(candidate);
+      } else {
+        setCurrentCode(getDefaultStarter(lang));
+      }
     } catch (e) {
       setCurrentCode(getDefaultStarter(lang));
     }
@@ -244,12 +282,23 @@ export const AssessmentTake: React.FC = () => {
   const handleResetCode = () => {
     if (!currentQuestion) return;
     if (window.confirm('Reset code to clean starter template? Your unsaved edits will be discarded.')) {
-      try {
-        const starter = JSON.parse(currentQuestion.starterCode || '{}');
-        const lang = currentLanguage || 'python';
-        setCurrentCode(starter[lang] || getDefaultStarter(lang));
-      } catch (e) {
-        setCurrentCode(getDefaultStarter(currentLanguage || 'python'));
+      const lang = currentLanguage || 'python';
+      const cleanStub = getDefaultStarter(lang);
+      setCurrentCode(cleanStub);
+      // Immediately delete any draft from local state so it cannot reappear
+      setCodeDrafts((prev) => {
+        const copy = { ...prev };
+        delete copy[currentQuestion.id];
+        return copy;
+      });
+      // Notify backend autosave to clear the draft in the database
+      if (assessment?.id) {
+        api.post('/submissions/autosave', {
+          assessmentId: assessment.id,
+          questionId: currentQuestion.id,
+          code: cleanStub,
+          language: lang,
+        }).catch(() => {});
       }
     }
   };
@@ -257,6 +306,21 @@ export const AssessmentTake: React.FC = () => {
   const handleClearCode = () => {
     if (window.confirm('Clear all code in the editor?')) {
       setCurrentCode('');
+      if (currentQuestion) {
+        setCodeDrafts((prev) => {
+          const copy = { ...prev };
+          delete copy[currentQuestion.id];
+          return copy;
+        });
+        if (assessment?.id) {
+          api.post('/submissions/autosave', {
+            assessmentId: assessment.id,
+            questionId: currentQuestion.id,
+            code: '',
+            language: currentLanguage || 'python',
+          }).catch(() => {});
+        }
+      }
     }
   };
 

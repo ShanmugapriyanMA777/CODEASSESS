@@ -42,10 +42,11 @@ export const QuestionForm: React.FC = () => {
   // Multi-language starter codes
   const [activeStarterLang, setActiveStarterLang] = useState('python');
   const [starterCodes, setStarterCodes] = useState<Record<string, string>>({
-    python: `import sys\n\ndef solve():\n    # Write your implementation here\n    pass\n\nif __name__ == '__main__':\n    solve()`,
-    java: `import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Write your implementation here\n    }\n}`,
-    c: `#include <stdio.h>\n\nint main() {\n    // Write your implementation here\n    return 0;\n}`,
-    cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your implementation here\n    return 0;\n}`,
+    python: `# Write your solution here\n`,
+    javascript: `// Write your solution here\n`,
+    java: `import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Write your solution here\n    }\n}\n`,
+    c: `#include <stdio.h>\n\nint main() {\n    // Write your solution here\n    return 0;\n}\n`,
+    cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}\n`,
   });
 
   // Test cases: input, expectedOutput, isHidden

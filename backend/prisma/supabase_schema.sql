@@ -344,59 +344,7 @@ Second line contains N space-separated integers.',
     'Easy',
     'Arrays',
     10,
-    '{"python":"import sys
-
-def solve():
-    lines = sys.stdin.read().split()
-    if not lines: return
-    n = int(lines[0])
-    arr = [int(x) for x in lines[1:n+1]]
-    print(max(arr))
-
-if __name__ == "__main__":
-    solve()","java":"import java.util.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        if (!sc.hasNextInt()) return;
-        int n = sc.nextInt();
-        int maxVal = Integer.MIN_VALUE;
-        for (int i = 0; i < n; i++) {
-            maxVal = Math.max(maxVal, sc.nextInt());
-        }
-        System.out.println(maxVal);
-    }
-}","c":"#include <stdio.h>
-#include <limits.h>
-
-int main() {
-    int n;
-    if (scanf("%d", &n) != 1) return 0;
-    int max_val = INT_MIN;
-    for (int i = 0; i < n; i++) {
-        int val;
-        scanf("%d", &val);
-        if (val > max_val) max_val = val;
-    }
-    printf("%d\n", max_val);
-    return 0;
-}","cpp":"#include <iostream>
-#include <vector>
-#include <algorithm>
-using namespace std;
-
-int main() {
-    int n;
-    if (!(cin >> n)) return 0;
-    int max_val = -1e9;
-    for (int i = 0; i < n; ++i) {
-        int x; cin >> x;
-        max_val = max(max_val, x);
-    }
-    cout << max_val << endl;
-    return 0;
-}"}',
+    '{"python":"# Write your solution here\\n","javascript":"// Write your solution here\\n","java":"import java.util.*;\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        // Write your solution here\\n    }\\n}\\n","c":"#include <stdio.h>\\n\\nint main() {\\n    // Write your solution here\\n    return 0;\\n}\\n","cpp":"#include <iostream>\\nusing namespace std;\\n\\nint main() {\\n    // Write your solution here\\n    return 0;\\n}\\n"}',
     2000,
     128,
     true,
@@ -431,77 +379,7 @@ Only one valid answer exists.',
     'Easy',
     'Arrays',
     15,
-    '{"python":"import sys
-
-def solve():
-    lines = sys.stdin.read().split()
-    if not lines: return
-    n, target = int(lines[0]), int(lines[1])
-    nums = [int(x) for x in lines[2:2+n]]
-    seen = {}
-    for i, num in enumerate(nums):
-        comp = target - num
-        if comp in seen:
-            print(f"{seen[comp]} {i}")
-            return
-        seen[num] = i
-
-if __name__ == "__main__":
-    solve()","java":"import java.util.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        if (!sc.hasNextInt()) return;
-        int n = sc.nextInt();
-        int target = sc.nextInt();
-        Map<Integer, Integer> map = new HashMap<>();
-        for (int i = 0; i < n; i++) {
-            int val = sc.nextInt();
-            int comp = target - val;
-            if (map.containsKey(comp)) {
-                System.out.println(map.get(comp) + " " + i);
-                return;
-            }
-            map.put(val, i);
-        }
-    }
-}","c":"#include <stdio.h>
-
-int main() {
-    int n, target;
-    if (scanf("%d %d", &n, &target) != 2) return 0;
-    int arr[10005];
-    for (int i = 0; i < n; i++) scanf("%d", &arr[i]);
-    for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            if (arr[i] + arr[j] == target) {
-                printf("%d %d\n", i, j);
-                return 0;
-            }
-        }
-    }
-    return 0;
-}","cpp":"#include <iostream>
-#include <vector>
-#include <unordered_map>
-using namespace std;
-
-int main() {
-    int n, target;
-    if (!(cin >> n >> target)) return 0;
-    unordered_map<int, int> seen;
-    for (int i = 0; i < n; ++i) {
-        int x; cin >> x;
-        int comp = target - x;
-        if (seen.count(comp)) {
-            cout << seen[comp] << " " << i << endl;
-            return 0;
-        }
-        seen[x] = i;
-    }
-    return 0;
-}"}',
+    '{"python":"# Write your solution here\\n","javascript":"// Write your solution here\\n","java":"import java.util.*;\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        // Write your solution here\\n    }\\n}\\n","c":"#include <stdio.h>\\n\\nint main() {\\n    // Write your solution here\\n    return 0;\\n}\\n","cpp":"#include <iostream>\\nusing namespace std;\\n\\nint main() {\\n    // Write your solution here\\n    return 0;\\n}\\n"}',
     2000,
     128,
     true,
