@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { supabase } from '../config/supabase';
 
 const prisma = new PrismaClient();
 
@@ -21,30 +22,78 @@ const SUGGESTIONS = [
 ];
 
 async function main() {
-  console.log('Seeding sample assessment feedback records...');
+  console.log('Seeding sample assessment feedback records across local DB and Supabase Cloud...');
 
-  const assessments = await prisma.assessment.findMany({ take: 2 });
-  if (assessments.length === 0) {
-    console.log('No assessments found to seed feedback for.');
-    return;
+  // 1. Fetch assessments from local and Supabase
+  let assessments: any[] = [];
+  try {
+    assessments = await prisma.assessment.findMany({ take: 3 });
+  } catch (_) {}
+
+  const { data: suAss } = await supabase.from('Assessment').select('id, title, totalMarks').limit(4);
+  const cloudAssessments = suAss || [];
+
+  // Combine unique assessment IDs
+  const allAssessments = [...assessments];
+  for (const ca of cloudAssessments) {
+    if (!allAssessments.some((a) => a.id === ca.id)) {
+      allAssessments.push(ca);
+    }
   }
 
-  const students = await prisma.user.findMany({
-    where: { role: 'STUDENT' },
-    include: { studentProfile: true },
-    take: 25,
+  // 2. Fetch students from local and Supabase
+  let students: any[] = [];
+  try {
+    students = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      include: { studentProfile: true },
+      take: 30,
+    });
+  } catch (_) {}
+
+  const { data: suUsers } = await supabase
+    .from('User')
+    .select('id, name, email')
+    .eq('role', 'STUDENT')
+    .limit(35);
+
+  const { data: suProfiles } = await supabase
+    .from('StudentProfile')
+    .select('userId, rollNumber, batchId');
+
+  const profileMap = new Map<string, any>();
+  if (suProfiles) {
+    suProfiles.forEach((p: any) => profileMap.set(p.userId, p));
+  }
+
+  const cloudStudents = (suUsers || []).map((u: any) => {
+    const prof = profileMap.get(u.id);
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      studentProfile: {
+        rollNumber: prof?.rollNumber || (u.id.startsWith('u-std-') ? u.id.replace('u-std-', '') : '312824104000'),
+        batchId: prof?.batchId,
+      },
+    };
   });
 
-  if (students.length === 0) {
-    console.log('No students found to seed feedback for.');
-    return;
+  const allStudents = [...students];
+  for (const cs of cloudStudents) {
+    if (!allStudents.some((s) => s.id === cs.id)) {
+      allStudents.push(cs);
+    }
   }
 
-  for (const assessment of assessments) {
-    console.log(`Seeding feedback for assessment: "${assessment.title}" (${assessment.id})`);
+  console.log(`Found ${allAssessments.length} assessment(s) and ${allStudents.length} student(s) to seed.`);
 
-    for (let i = 0; i < students.length; i++) {
-      const student = students[i];
+  for (const assessment of allAssessments) {
+    console.log(`\nSeeding feedback for assessment: "${assessment.title}" (${assessment.id})`);
+
+    const studentsToSeed = allStudents.slice(0, 30);
+    for (let i = 0; i < studentsToSeed.length; i++) {
+      const student = studentsToSeed[i];
 
       // Ratings between 3 and 5 (realistic high-performing distribution)
       const q1 = ((i * 7 + 3) % 3) + 3; // 3, 4, or 5
@@ -53,90 +102,88 @@ async function main() {
       const q4 = ((i * 2 + 3) % 2) + 3; // 3 or 4
       const q5 = ((i * 11 + 4) % 3) + 3; // 3, 4, or 5
       const suggestion = SUGGESTIONS[i % SUGGESTIONS.length];
+      const submittedAt = new Date(Date.now() - i * 3600000).toISOString();
 
-      // Upsert AssessmentFeedback
-      await prisma.assessmentFeedback.upsert({
-        where: {
-          assessmentId_studentId: {
+      // 1. Seed local SQLite / Prisma
+      try {
+        await prisma.assessmentFeedback.upsert({
+          where: {
+            assessmentId_studentId: {
+              assessmentId: assessment.id,
+              studentId: student.id,
+            },
+          },
+          update: {
+            overallCodingSkillsRating: q1,
+            basicConceptsUnderstandingRating: q2,
+            problemSolvingRating: q3,
+            difficultyLevelRating: q4,
+            debuggingAbilityRating: q5,
+            suggestions: suggestion,
+            submittedAt: new Date(submittedAt),
+          },
+          create: {
             assessmentId: assessment.id,
             studentId: student.id,
+            overallCodingSkillsRating: q1,
+            basicConceptsUnderstandingRating: q2,
+            problemSolvingRating: q3,
+            difficultyLevelRating: q4,
+            debuggingAbilityRating: q5,
+            suggestions: suggestion,
+            submittedAt: new Date(submittedAt),
           },
-        },
-        update: {
+        });
+      } catch (_) {}
+
+      // 2. Seed Supabase Cloud Report table (CLASS_FEEDBACK_ENTRY)
+      try {
+        const feedbackPayload = {
           overallCodingSkillsRating: q1,
           basicConceptsUnderstandingRating: q2,
           problemSolvingRating: q3,
           difficultyLevelRating: q4,
           debuggingAbilityRating: q5,
           suggestions: suggestion,
-          submittedAt: new Date(Date.now() - i * 3600000),
-        },
-        create: {
-          assessmentId: assessment.id,
-          studentId: student.id,
-          overallCodingSkillsRating: q1,
-          basicConceptsUnderstandingRating: q2,
-          problemSolvingRating: q3,
-          difficultyLevelRating: q4,
-          debuggingAbilityRating: q5,
-          suggestions: suggestion,
-          submittedAt: new Date(Date.now() - i * 3600000),
-        },
-      });
+          studentName: student.name,
+          rollNumber: student.studentProfile?.rollNumber || '312824104000',
+          batchId: student.studentProfile?.batchId || '',
+          submittedAt,
+        };
 
-      // Also ensure completed attempt and result exist so class statements have data too
-      const obtainedMarks = Math.min(assessment.totalMarks, Math.max(40, 60 + ((i * 13) % 40)));
-      const percentage = (obtainedMarks / assessment.totalMarks) * 100;
+        const { data: existingReport } = await supabase
+          .from('Report')
+          .select('id')
+          .eq('type', 'CLASS_FEEDBACK_ENTRY')
+          .eq('studentId', student.id)
+          .eq('assessmentId', assessment.id)
+          .maybeSingle();
 
-      await prisma.assessmentAttempt.upsert({
-        where: { id: `att-${assessment.id.slice(0, 8)}-${student.id.slice(0, 8)}` },
-        update: {
-          status: 'COMPLETED',
-          remainingSeconds: 0,
-          submitTime: new Date(Date.now() - i * 3600000),
-        },
-        create: {
-          id: `att-${assessment.id.slice(0, 8)}-${student.id.slice(0, 8)}`,
-          assessmentId: assessment.id,
-          studentId: student.id,
-          status: 'COMPLETED',
-          remainingSeconds: 0,
-          currentCodeDraftsJson: '{}',
-          submitTime: new Date(Date.now() - i * 3600000),
-        },
-      });
-
-      await prisma.assessmentResult.upsert({
-        where: { id: `res-${assessment.id.slice(0, 8)}-${student.id.slice(0, 8)}` },
-        update: {
-          totalMarks: assessment.totalMarks,
-          obtainedMarks,
-          percentage,
-          isPassed: percentage >= 50,
-          submittedAt: new Date(Date.now() - i * 3600000),
-        },
-        create: {
-          id: `res-${assessment.id.slice(0, 8)}-${student.id.slice(0, 8)}`,
-          assessmentId: assessment.id,
-          studentId: student.id,
-          totalMarks: assessment.totalMarks,
-          obtainedMarks,
-          percentage,
-          questionsAttempted: 3,
-          questionsSolved: 3,
-          testCasesPassed: 6,
-          totalTestCases: 6,
-          timeTaken: 1800,
-          rank: i + 1,
-          isPassed: percentage >= 50,
-          submittedAt: new Date(Date.now() - i * 3600000),
-        },
-      });
+        if (existingReport) {
+          await supabase
+            .from('Report')
+            .update({
+              title: `Class Feedback - ${student.name}`,
+              summaryJson: JSON.stringify(feedbackPayload),
+            })
+            .eq('id', existingReport.id);
+        } else {
+          await supabase.from('Report').insert({
+            title: `Class Feedback - ${student.name}`,
+            type: 'CLASS_FEEDBACK_ENTRY',
+            studentId: student.id,
+            assessmentId: assessment.id,
+            generatedById: student.id,
+            summaryJson: JSON.stringify(feedbackPayload),
+          });
+        }
+      } catch (err: any) {
+        console.warn(`Supabase seed warning for student ${student.name}:`, err.message);
+      }
     }
   }
 
-  const count = await prisma.assessmentFeedback.count();
-  console.log(`Done! Total assessment feedback records in database: ${count}`);
+  console.log('\n🎉 Finished seeding feedback records in both local database and Supabase Cloud!');
 }
 
 main()

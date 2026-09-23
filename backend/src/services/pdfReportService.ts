@@ -727,15 +727,15 @@ export class PdfReportService {
     facultyName?: string;
     subjectName?: string;
     subjectCode?: string;
-    summaryMetrics: {
-      totalResponses: number;
-      avgOverallSkills: number;
-      avgBasicConcepts: number;
-      avgProblemSolving: number;
-      avgDifficultyLevel: number;
-      avgDebuggingAbility: number;
+    summaryMetrics?: {
+      totalResponses?: number;
+      avgOverallSkills?: number;
+      avgBasicConcepts?: number;
+      avgProblemSolving?: number;
+      avgDifficultyLevel?: number;
+      avgDebuggingAbility?: number;
     };
-    records: Array<{
+    records?: Array<{
       sNo: number;
       registerNumber: string;
       studentName: string;
@@ -748,204 +748,232 @@ export class PdfReportService {
     }>;
   }): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
-      const doc = new PDFDocument({
-        size: 'A4',
-        margin: 36,
-        info: {
-          Title: 'Class Training Feedback Report',
-          Author: 'Agni College of Technology Assessment System',
-        },
-      });
+      try {
+        const doc = new PDFDocument({
+          size: 'A4',
+          margin: 36,
+          info: {
+            Title: 'Class Training Feedback Report',
+            Author: 'Agni College of Technology Assessment System',
+          },
+        });
 
-      const buffers: Buffer[] = [];
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.on('error', reject);
+        const buffers: Buffer[] = [];
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', reject);
 
-      const institutionName = params.institutionName || 'AGNI COLLEGE OF TECHNOLOGY';
-      const subHeader = params.subHeader || '(An Autonomous Institution, Affiliated to Anna University, Chennai.)';
-      const accreditation = params.accreditation || "Approved by AICTE, Accredited by NAAC with 'A+' Grade";
-      const location = params.location || 'OMR, Navalur, Thalambur, Chennai.-600130';
-      const programme = params.programme || 'B.E. COMPUTER SCIENCE AND ENGINEERING';
-      const batchSec = params.batchSec || '2024 / C';
-      const facultyName = params.facultyName || 'Mrs. VARSHA';
-      const subjectName = params.subjectName || 'CORE PROGRAMMING & LOGIC SPRINT';
-      const assessmentDate = params.assessmentDate || new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
-      const conducted = params.conducted || '2 Hours';
-      const summary = params.summaryMetrics;
-      const records = params.records;
+        const institutionName = params.institutionName || 'AGNI COLLEGE OF TECHNOLOGY';
+        const subHeader = params.subHeader || '(An Autonomous Institution, Affiliated to Anna University, Chennai.)';
+        const accreditation = params.accreditation || "Approved by AICTE, Accredited by NAAC with 'A+' Grade";
+        const location = params.location || 'OMR, Navalur, Thalambur, Chennai.-600130';
+        const programme = params.programme || 'B.E. COMPUTER SCIENCE AND ENGINEERING';
+        const batchSec = params.batchSec || '2024 / C';
+        const facultyName = params.facultyName || 'Mrs. VARSHA';
+        const subjectName = params.subjectName || 'CORE PROGRAMMING & LOGIC SPRINT';
+        const assessmentDate = params.assessmentDate || new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+        const conducted = params.conducted || '2 Hours';
+        const summary = params.summaryMetrics || {};
+        const records = Array.isArray(params.records) ? params.records : [];
 
-      const drawFeedbackHeader = (isFirstPage = false) => {
-        // Logo
-        const logoPath = path.resolve(__dirname, '../../assets/act-logo.png');
-        if (fs.existsSync(logoPath)) {
-          try {
-            doc.image(logoPath, 38, 22, { width: 55 });
-          } catch (e) {
-            // Ignore logo error
+        const avgSkills = Number(summary.avgOverallSkills || 0).toFixed(1);
+        const avgConcepts = Number(summary.avgBasicConcepts || 0).toFixed(1);
+        const avgSolving = Number(summary.avgProblemSolving || 0).toFixed(1);
+        const avgDiff = Number(summary.avgDifficultyLevel || 0).toFixed(1);
+        const avgDebug = Number(summary.avgDebuggingAbility || 0).toFixed(1);
+
+        const drawFeedbackHeader = (isFirstPage = false) => {
+          // Robust Logo Resolution across local and Vercel serverless paths
+          let logoPath = path.resolve(process.cwd(), 'assets', 'agni_logo.png');
+          if (!fs.existsSync(logoPath)) {
+            logoPath = path.resolve(process.cwd(), 'backend', 'assets', 'agni_logo.png');
+          }
+          if (!fs.existsSync(logoPath)) {
+            logoPath = path.resolve(__dirname, '../../assets/agni_logo.png');
+          }
+          if (!fs.existsSync(logoPath)) {
+            logoPath = path.resolve(__dirname, '../../../assets/agni_logo.png');
+          }
+
+          if (fs.existsSync(logoPath)) {
+            try {
+              doc.image(logoPath, 38, 22, { width: 55 });
+            } catch (e) {
+              // Ignore image error safely
+            }
+          }
+
+          // Title Block
+          doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000')
+            .text(institutionName, 36, 22, { align: 'center', width: 523 });
+
+          doc.font('Helvetica').fontSize(7.5).fillColor('#222222')
+            .text(subHeader, 36, 37, { align: 'center', width: 523 });
+
+          doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
+            .text(accreditation, 36, 48, { align: 'center', width: 523 });
+
+          doc.font('Helvetica').fontSize(7).fillColor('#333333')
+            .text(location, 36, 59, { align: 'center', width: 523 });
+
+          doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000')
+            .text('TRAINING FEEDBACK & STUDENT SKILL EVALUATION REPORT', 36, 73, { align: 'center', width: 523 });
+
+          // Metadata box
+          const boxY = 90;
+          const midX = 295;
+          const col1X = 42;
+          const col1W = 245;
+          const col2X = midX + 6;
+          const col2W = 250;
+          const metaH = 46;
+
+          doc.rect(36, boxY, 523, metaH).strokeColor('#000000').lineWidth(0.75).stroke();
+          doc.moveTo(midX, boxY).lineTo(midX, boxY + metaH).strokeColor('#000000').lineWidth(0.75).stroke();
+
+          const div1Y = boxY + 23;
+          doc.moveTo(36, div1Y).lineTo(559, div1Y).strokeColor('#000000').lineWidth(0.75).stroke();
+
+          // Row 1
+          doc.font('Helvetica-Bold').fontSize(7.5)
+            .text('PROGRAMME : ', col1X, boxY + 6, { continued: true, width: col1W })
+            .font('Helvetica').text(programme, { width: col1W });
+
+          doc.font('Helvetica-Bold').fontSize(7.5)
+            .text('BATCH / SEC. : ', col2X, boxY + 6, { continued: true, width: col2W })
+            .font('Helvetica').text(batchSec, { width: col2W });
+
+          // Row 2
+          doc.font('Helvetica-Bold').fontSize(7.5)
+            .text('FACULTY : ', col1X, div1Y + 6, { continued: true, width: col1W })
+            .font('Helvetica').text(facultyName, { width: col1W });
+
+          doc.font('Helvetica-Bold').fontSize(7.5)
+            .text('SUBJECT : ', col2X, div1Y + 6, { continued: true, width: col2W })
+            .font('Helvetica').text(subjectName, { width: col2W });
+
+          let nextY = boxY + metaH + 6;
+
+          // KPI Summary Box on first page
+          if (isFirstPage) {
+            doc.rect(36, nextY, 523, 34).fillColor('#f8fafc').fill();
+            doc.rect(36, nextY, 523, 34).strokeColor('#000000').lineWidth(0.75).stroke();
+
+            const kpiW = 523 / 5;
+            const kpis = [
+              { label: 'Overall Skills', val: `${avgSkills} / 5 ★` },
+              { label: 'Concepts', val: `${avgConcepts} / 5 ★` },
+              { label: 'Problem Solving', val: `${avgSolving} / 5 ★` },
+              { label: 'Difficulty', val: `${avgDiff} / 5 ★` },
+              { label: 'Debugging', val: `${avgDebug} / 5 ★` },
+            ];
+
+            kpis.forEach((k, idx) => {
+              const kX = 36 + idx * kpiW;
+              if (idx > 0) {
+                doc.moveTo(kX, nextY).lineTo(kX, nextY + 34).strokeColor('#cccccc').lineWidth(0.5).stroke();
+              }
+              doc.font('Helvetica-Bold').fontSize(7).fillColor('#475569')
+                .text(k.label.toUpperCase(), kX, nextY + 5, { width: kpiW, align: 'center' });
+              doc.font('Helvetica-Bold').fontSize(10).fillColor('#1e293b')
+                .text(k.val, kX, nextY + 16, { width: kpiW, align: 'center' });
+            });
+
+            nextY += 40;
+          }
+
+          // Table Header
+          const tableY = nextY;
+          doc.rect(36, tableY, 523, 24).fillColor('#f1f5f9').fill();
+          doc.rect(36, tableY, 523, 24).strokeColor('#000000').lineWidth(0.75).stroke();
+
+          // Column X coordinates: SNO(36-64), REG(64-144), NAME(144-245), SKILLS(245-285), CONCEPTS(285-330), SOLV(330-375), DIFF(375-415), DEBUG(415-455), SUGGESTIONS(455-559)
+          const cols = [64, 144, 245, 285, 330, 375, 415, 455];
+          cols.forEach((x) => {
+            doc.moveTo(x, tableY).lineTo(x, tableY + 24).strokeColor('#000000').lineWidth(0.75).stroke();
+          });
+
+          doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#000000');
+          doc.text('S.NO', 36, tableY + 8, { width: 28, align: 'center' });
+          doc.text('REGISTER NO', 64, tableY + 8, { width: 80, align: 'center' });
+          doc.text('STUDENT NAME', 144, tableY + 8, { width: 101, align: 'center' });
+          doc.text('SKILLS\n(1-5 ★)', 245, tableY + 4, { width: 40, align: 'center' });
+          doc.text('CONCEPTS\n(1-5 ★)', 285, tableY + 4, { width: 45, align: 'center' });
+          doc.text('SOLVING\n(1-5 ★)', 330, tableY + 4, { width: 45, align: 'center' });
+          doc.text('DIFF.\n(1-5 ★)', 375, tableY + 4, { width: 40, align: 'center' });
+          doc.text('DEBUG\n(1-5 ★)', 415, tableY + 4, { width: 40, align: 'center' });
+          doc.text('SUGGESTIONS & IMPROVEMENTS', 455, tableY + 8, { width: 104, align: 'center' });
+
+          return tableY + 24;
+        };
+
+        let currentY = drawFeedbackHeader(true);
+        const cols = [64, 144, 245, 285, 330, 375, 415, 455];
+
+        if (records.length === 0) {
+          // Empty State row
+          doc.rect(36, currentY, 523, 30).strokeColor('#000000').lineWidth(0.5).stroke();
+          doc.font('Helvetica-Oblique').fontSize(8).fillColor('#64748b')
+            .text('No student feedback entries recorded yet for this assessment.', 36, currentY + 10, { align: 'center', width: 523 });
+          currentY += 30;
+        } else {
+          for (let i = 0; i < records.length; i++) {
+            const row = records[i];
+            const sugText = String(row.suggestions || '-').trim() || '-';
+
+            // Measure suggestions text height dynamically
+            doc.font('Helvetica').fontSize(6.5);
+            const sugH = Math.max(18, doc.heightOfString(sugText, { width: 98 }) + 8);
+            const rowH = Math.min(50, Math.max(20, sugH));
+
+            if (currentY + rowH > 740) {
+              doc.addPage();
+              currentY = drawFeedbackHeader(false);
+            }
+
+            // Draw row outer & dividers
+            doc.rect(36, currentY, 523, rowH).strokeColor('#000000').lineWidth(0.5).stroke();
+            cols.forEach((x) => {
+              doc.moveTo(x, currentY).lineTo(x, currentY + rowH).strokeColor('#000000').lineWidth(0.5).stroke();
+            });
+
+            const textY = currentY + 5;
+            doc.font('Helvetica').fontSize(7).fillColor('#000000');
+            doc.text((row.sNo || i + 1).toString(), 36, textY, { width: 28, align: 'center' });
+            doc.font('Helvetica-Bold').text(String(row.registerNumber || '312824104000'), 64, textY, { width: 80, align: 'center' });
+            doc.font('Helvetica').text(String(row.studentName || 'STUDENT').toUpperCase(), 148, textY, { width: 94, align: 'left' });
+
+            // Ratings (Stars out of 5)
+            doc.font('Helvetica-Bold').text(`${row.overallSkills || 5}★`, 245, textY, { width: 40, align: 'center' });
+            doc.text(`${row.basicConcepts || 5}★`, 285, textY, { width: 45, align: 'center' });
+            doc.text(`${row.problemSolving || 5}★`, 330, textY, { width: 45, align: 'center' });
+            doc.text(`${row.difficultyLevel || 3}★`, 375, textY, { width: 40, align: 'center' });
+            doc.text(`${row.debuggingAbility || 5}★`, 415, textY, { width: 40, align: 'center' });
+
+            // Suggestions text with word wrap
+            doc.font('Helvetica').fontSize(6.5).text(sugText, 458, textY, { width: 98, align: 'left' });
+
+            currentY += rowH;
           }
         }
 
-        // Title Block
-        doc.font('Helvetica-Bold').fontSize(12).fillColor('#000000')
-          .text(institutionName, 36, 22, { align: 'center', width: 523 });
-
-        doc.font('Helvetica').fontSize(7.5).fillColor('#222222')
-          .text(subHeader, 36, 37, { align: 'center', width: 523 });
-
-        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#000000')
-          .text(accreditation, 36, 48, { align: 'center', width: 523 });
-
-        doc.font('Helvetica').fontSize(7).fillColor('#333333')
-          .text(location, 36, 59, { align: 'center', width: 523 });
-
-        doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000')
-          .text('TRAINING FEEDBACK & STUDENT SKILL EVALUATION REPORT', 36, 73, { align: 'center', width: 523 });
-
-        // Metadata box
-        const boxY = 90;
-        const midX = 295;
-        const col1X = 42;
-        const col1W = 245;
-        const col2X = midX + 6;
-        const col2W = 250;
-        const metaH = 46;
-
-        doc.rect(36, boxY, 523, metaH).strokeColor('#000000').lineWidth(0.75).stroke();
-        doc.moveTo(midX, boxY).lineTo(midX, boxY + metaH).strokeColor('#000000').lineWidth(0.75).stroke();
-
-        const div1Y = boxY + 23;
-        doc.moveTo(36, div1Y).lineTo(559, div1Y).strokeColor('#000000').lineWidth(0.75).stroke();
-
-        // Row 1
-        doc.font('Helvetica-Bold').fontSize(7.5)
-          .text('PROGRAMME : ', col1X, boxY + 6, { continued: true, width: col1W })
-          .font('Helvetica').text(programme, { width: col1W });
-
-        doc.font('Helvetica-Bold').fontSize(7.5)
-          .text('BATCH / SEC. : ', col2X, boxY + 6, { continued: true, width: col2W })
-          .font('Helvetica').text(batchSec, { width: col2W });
-
-        // Row 2
-        doc.font('Helvetica-Bold').fontSize(7.5)
-          .text('FACULTY : ', col1X, div1Y + 6, { continued: true, width: col1W })
-          .font('Helvetica').text(facultyName, { width: col1W });
-
-        doc.font('Helvetica-Bold').fontSize(7.5)
-          .text('SUBJECT : ', col2X, div1Y + 6, { continued: true, width: col2W })
-          .font('Helvetica').text(subjectName, { width: col2W });
-
-        let nextY = boxY + metaH + 6;
-
-        // KPI Summary Box on first page
-        if (isFirstPage) {
-          doc.rect(36, nextY, 523, 34).fillColor('#f8fafc').fill();
-          doc.rect(36, nextY, 523, 34).strokeColor('#000000').lineWidth(0.75).stroke();
-
-          const kpiW = 523 / 5;
-          const kpis = [
-            { label: 'Overall Skills', val: `${summary.avgOverallSkills.toFixed(1)} / 5 ★` },
-            { label: 'Concepts', val: `${summary.avgBasicConcepts.toFixed(1)} / 5 ★` },
-            { label: 'Problem Solving', val: `${summary.avgProblemSolving.toFixed(1)} / 5 ★` },
-            { label: 'Difficulty', val: `${summary.avgDifficultyLevel.toFixed(1)} / 5 ★` },
-            { label: 'Debugging', val: `${summary.avgDebuggingAbility.toFixed(1)} / 5 ★` },
-          ];
-
-          kpis.forEach((k, idx) => {
-            const kX = 36 + idx * kpiW;
-            if (idx > 0) {
-              doc.moveTo(kX, nextY).lineTo(kX, nextY + 34).strokeColor('#cccccc').lineWidth(0.5).stroke();
-            }
-            doc.font('Helvetica-Bold').fontSize(7).fillColor('#475569')
-              .text(k.label.toUpperCase(), kX, nextY + 5, { width: kpiW, align: 'center' });
-            doc.font('Helvetica-Bold').fontSize(10).fillColor('#1e293b')
-              .text(k.val, kX, nextY + 16, { width: kpiW, align: 'center' });
-          });
-
-          nextY += 40;
-        }
-
-        // Table Header
-        const tableY = nextY;
-        doc.rect(36, tableY, 523, 24).fillColor('#f1f5f9').fill();
-        doc.rect(36, tableY, 523, 24).strokeColor('#000000').lineWidth(0.75).stroke();
-
-        // Column X coordinates: SNO(36-64), REG(64-144), NAME(144-245), SKILLS(245-285), CONCEPTS(285-330), SOLV(330-375), DIFF(375-415), DEBUG(415-455), SUGGESTIONS(455-559)
-        const cols = [64, 144, 245, 285, 330, 375, 415, 455];
-        cols.forEach((x) => {
-          doc.moveTo(x, tableY).lineTo(x, tableY + 24).strokeColor('#000000').lineWidth(0.75).stroke();
-        });
-
-        doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#000000');
-        doc.text('S.NO', 36, tableY + 8, { width: 28, align: 'center' });
-        doc.text('REGISTER NO', 64, tableY + 8, { width: 80, align: 'center' });
-        doc.text('STUDENT NAME', 144, tableY + 8, { width: 101, align: 'center' });
-        doc.text('SKILLS\n(1-5 ★)', 245, tableY + 4, { width: 40, align: 'center' });
-        doc.text('CONCEPTS\n(1-5 ★)', 285, tableY + 4, { width: 45, align: 'center' });
-        doc.text('SOLVING\n(1-5 ★)', 330, tableY + 4, { width: 45, align: 'center' });
-        doc.text('DIFF.\n(1-5 ★)', 375, tableY + 4, { width: 40, align: 'center' });
-        doc.text('DEBUG\n(1-5 ★)', 415, tableY + 4, { width: 40, align: 'center' });
-        doc.text('SUGGESTIONS & IMPROVEMENTS', 455, tableY + 8, { width: 104, align: 'center' });
-
-        return tableY + 24;
-      };
-
-      let currentY = drawFeedbackHeader(true);
-      const cols = [64, 144, 245, 285, 330, 375, 415, 455];
-
-      for (let i = 0; i < records.length; i++) {
-        const row = records[i];
-        const sugText = row.suggestions || '-';
-
-        // Measure suggestions text height dynamically
-        doc.font('Helvetica').fontSize(6.5);
-        const sugH = Math.max(18, doc.heightOfString(sugText, { width: 98 }) + 8);
-        const rowH = Math.min(50, Math.max(20, sugH));
-
-        if (currentY + rowH > 740) {
+        // Bottom signatures
+        if (currentY > 710) {
           doc.addPage();
-          currentY = drawFeedbackHeader(false);
+          currentY = 80;
         }
+        const sigY = Math.min(760, Math.max(currentY + 28, 680));
+        doc.moveTo(48, sigY).lineTo(210, sigY).lineWidth(0.75).strokeColor('#000000').stroke();
+        doc.moveTo(380, sigY).lineTo(540, sigY).lineWidth(0.75).strokeColor('#000000').stroke();
 
-        // Draw row outer & dividers
-        doc.rect(36, currentY, 523, rowH).strokeColor('#000000').lineWidth(0.5).stroke();
-        cols.forEach((x) => {
-          doc.moveTo(x, currentY).lineTo(x, currentY + rowH).strokeColor('#000000').lineWidth(0.5).stroke();
-        });
+        doc.font('Helvetica').fontSize(8.5).fillColor('#000000');
+        doc.text(`Name of the Faculty : ${facultyName}`, 48, sigY + 6);
+        doc.text('Signature of the HoD.', 380, sigY + 6);
 
-        const textY = currentY + 5;
-        doc.font('Helvetica').fontSize(7).fillColor('#000000');
-        doc.text(row.sNo.toString(), 36, textY, { width: 28, align: 'center' });
-        doc.font('Helvetica-Bold').text(row.registerNumber, 64, textY, { width: 80, align: 'center' });
-        doc.font('Helvetica').text(row.studentName, 148, textY, { width: 94, align: 'left' });
-
-        // Ratings (Stars out of 5)
-        doc.font('Helvetica-Bold').text(`${row.overallSkills}★`, 245, textY, { width: 40, align: 'center' });
-        doc.text(`${row.basicConcepts}★`, 285, textY, { width: 45, align: 'center' });
-        doc.text(`${row.problemSolving}★`, 330, textY, { width: 45, align: 'center' });
-        doc.text(`${row.difficultyLevel}★`, 375, textY, { width: 40, align: 'center' });
-        doc.text(`${row.debuggingAbility}★`, 415, textY, { width: 40, align: 'center' });
-
-        // Suggestions text with word wrap
-        doc.font('Helvetica').fontSize(6.5).text(sugText, 458, textY, { width: 98, align: 'left' });
-
-        currentY += rowH;
+        doc.end();
+      } catch (err) {
+        reject(err);
       }
-
-      // Bottom signatures
-      if (currentY > 730) {
-        doc.addPage();
-        currentY = 100;
-      }
-      const sigY = Math.max(currentY + 25, 755);
-      doc.moveTo(48, sigY).lineTo(210, sigY).lineWidth(0.75).strokeColor('#000000').stroke();
-      doc.moveTo(380, sigY).lineTo(540, sigY).lineWidth(0.75).strokeColor('#000000').stroke();
-
-      doc.font('Helvetica').fontSize(8.5).fillColor('#000000');
-      doc.text('Signature of the Faculty', 48, sigY + 6);
-      doc.text('Signature of the HoD.', 380, sigY + 6);
-
-      doc.end();
     });
   }
 }

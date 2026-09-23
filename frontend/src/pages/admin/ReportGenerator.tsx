@@ -371,8 +371,19 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ defaultTab }) 
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
-      alert('Failed to download Class Feedback CSV report');
+    } catch (err: any) {
+      console.error('Download feedback CSV error:', err);
+      let errMsg = 'Failed to download Class Feedback CSV report';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const txt = await err.response.data.text();
+          const parsed = JSON.parse(txt);
+          if (parsed.message) errMsg = parsed.message;
+        } catch (_) {}
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      }
+      alert(errMsg);
     } finally {
       setDownloadingFeedbackCsv(false);
     }
@@ -408,8 +419,19 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ defaultTab }) 
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
-      alert('Failed to generate Class Feedback PDF report');
+    } catch (err: any) {
+      console.error('Download feedback PDF error:', err);
+      let errMsg = 'Failed to generate Class Feedback PDF report';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const txt = await err.response.data.text();
+          const parsed = JSON.parse(txt);
+          if (parsed.message) errMsg = parsed.message;
+        } catch (_) {}
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      }
+      alert(errMsg);
     } finally {
       setDownloadingFeedbackPdf(false);
     }

@@ -811,10 +811,11 @@ export const AssessmentTake: React.FC = () => {
               ) : (
                 <button
                   onClick={() => setFinishModalOpen(true)}
-                  className="flex items-center space-x-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm ml-1 cursor-pointer"
-                  title="Proceed to Training Feedback and Submission"
+                  className="flex items-center space-x-1.5 px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm ml-1 cursor-pointer"
+                  title="Complete Assessment and Open Training Feedback"
                 >
-                  <span>Feedback</span>
+                  <Star className="w-3 h-3 text-amber-300 fill-amber-300" />
+                  <span>Submit Assessment</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               )}
