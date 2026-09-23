@@ -628,33 +628,33 @@ export const ReportGenerator: React.FC = () => {
                 {/* 2-Column x 3-Row Bordered Metadata Table */}
                 <div className="border border-black mb-4 font-serif text-xs">
                   <div className="grid grid-cols-2 border-b border-black">
-                    <div className="py-1.5 px-3 border-r border-black flex items-center">
-                      <span className="font-bold w-40 text-black">PROGRAMME :</span>
-                      <span className="font-normal text-black uppercase">{programme}</span>
+                    <div className="py-1.5 px-3 border-r border-black flex items-start">
+                      <span className="font-bold whitespace-nowrap text-black mr-2">PROGRAMME :</span>
+                      <span className="font-normal text-black uppercase break-words flex-1">{programme}</span>
                     </div>
-                    <div className="py-1.5 px-3 flex items-center">
-                      <span className="font-bold w-36 text-black">BATCH / SEC. :</span>
-                      <span className="font-normal text-black uppercase">{batchSec}</span>
+                    <div className="py-1.5 px-3 flex items-start">
+                      <span className="font-bold whitespace-nowrap text-black mr-2">BATCH / SEC. :</span>
+                      <span className="font-normal text-black uppercase break-words flex-1">{batchSec}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 border-b border-black">
-                    <div className="py-1.5 px-3 border-r border-black flex items-center">
-                      <span className="font-bold w-40 text-black">Name of the Faculty :</span>
-                      <span className="font-normal text-black">{facultyName}</span>
+                    <div className="py-1.5 px-3 border-r border-black flex items-start">
+                      <span className="font-bold whitespace-nowrap text-black mr-2">Name of the Faculty :</span>
+                      <span className="font-normal text-black break-words flex-1">{facultyName}</span>
                     </div>
-                    <div className="py-1.5 px-3 flex items-center">
-                      <span className="font-bold w-36 text-black">Subject Name :</span>
-                      <span className="font-normal text-black uppercase">{subjectName}</span>
+                    <div className="py-1.5 px-3 flex items-start">
+                      <span className="font-bold whitespace-nowrap text-black mr-2">Subject Name :</span>
+                      <span className="font-normal text-black uppercase break-words flex-1">{subjectName}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2">
-                    <div className="py-1.5 px-3 border-r border-black flex items-center">
-                      <span className="font-bold w-40 text-black">ASSESSMENT DATE :</span>
-                      <span className="font-normal text-black">{assessmentDate}</span>
+                    <div className="py-1.5 px-3 border-r border-black flex items-start">
+                      <span className="font-bold whitespace-nowrap text-black mr-2">ASSESSMENT DATE :</span>
+                      <span className="font-normal text-black break-words flex-1">{assessmentDate}</span>
                     </div>
-                    <div className="py-1.5 px-3 flex items-center">
-                      <span className="font-bold w-36 text-black">Conducted :</span>
-                      <span className="font-normal text-black">{conducted}</span>
+                    <div className="py-1.5 px-3 flex items-start">
+                      <span className="font-bold whitespace-nowrap text-black mr-2">Conducted :</span>
+                      <span className="font-normal text-black break-words flex-1">{conducted}</span>
                     </div>
                   </div>
                 </div>

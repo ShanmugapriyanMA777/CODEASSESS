@@ -557,30 +557,79 @@ export class PdfReportService {
         doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000')
           .text('ASSESSMENT REPORT', 36, 106, { align: 'center', width: 523 });
 
-        // Metadata 2-column, 3-row boxed grid (X: 36, Y: 124, width: 523, height: 48)
+        // Metadata 2-column, 3-row boxed grid with dynamic row heights to completely prevent text overlapping
         const boxY = 124;
-        doc.rect(36, boxY, 523, 48).strokeColor('#000000').lineWidth(0.75).stroke();
+        const col1X = 42;
+        const col2X = 304;
+        const midX = 36 + 261.5; // 297.5
+        const col1W = midX - col1X - 6; // 249.5
+        const col2W = 559 - col2X - 6; // 249
+
+        const metaFontSize = 7.5;
+        doc.fontSize(metaFontSize);
+
+        const getRowHeight = (h1: number, h2: number) => Math.max(18, Math.ceil(Math.max(h1, h2)) + 8);
+
+        const r1H = getRowHeight(
+          doc.heightOfString(`PROGRAMME : ${programme}`, { width: col1W }),
+          doc.heightOfString(`BATCH / SEC. : ${batchSec}`, { width: col2W })
+        );
+
+        const r2H = getRowHeight(
+          doc.heightOfString(`Name of the Faculty : ${facultyName}`, { width: col1W }),
+          doc.heightOfString(`Subject Name : ${subjectName}`, { width: col2W })
+        );
+
+        const r3H = getRowHeight(
+          doc.heightOfString(`ASSESSMENT DATE : ${assessmentDate}`, { width: col1W }),
+          doc.heightOfString(`Conducted : ${conducted}`, { width: col2W })
+        );
+
+        const totalBoxHeight = r1H + r2H + r3H;
+
+        // Outer box border
+        doc.rect(36, boxY, 523, totalBoxHeight).strokeColor('#000000').lineWidth(0.75).stroke();
         // Vertical divider in the middle
-        doc.moveTo(36 + 261.5, boxY).lineTo(36 + 261.5, boxY + 48).strokeColor('#000000').lineWidth(0.75).stroke();
-        // Horizontal dividers
-        doc.moveTo(36, boxY + 16).lineTo(559, boxY + 16).strokeColor('#000000').lineWidth(0.75).stroke();
-        doc.moveTo(36, boxY + 32).lineTo(559, boxY + 32).strokeColor('#000000').lineWidth(0.75).stroke();
+        doc.moveTo(midX, boxY).lineTo(midX, boxY + totalBoxHeight).strokeColor('#000000').lineWidth(0.75).stroke();
 
-        doc.fontSize(8);
-        // Row 1
-        doc.font('Helvetica-Bold').text('PROGRAMME : ', 42, boxY + 4, { continued: true }).font('Helvetica').text(programme);
-        doc.font('Helvetica-Bold').text('BATCH / SEC. : ', 305, boxY + 4, { continued: true }).font('Helvetica').text(batchSec);
+        // Horizontal dividers placed strictly between rows with zero overlap
+        const div1Y = boxY + r1H;
+        const div2Y = div1Y + r2H;
+        doc.moveTo(36, div1Y).lineTo(559, div1Y).strokeColor('#000000').lineWidth(0.75).stroke();
+        doc.moveTo(36, div2Y).lineTo(559, div2Y).strokeColor('#000000').lineWidth(0.75).stroke();
 
-        // Row 2
-        doc.font('Helvetica-Bold').text('Name of the Faculty : ', 42, boxY + 20, { continued: true }).font('Helvetica').text(facultyName);
-        doc.font('Helvetica-Bold').text('Subject Name : ', 305, boxY + 20, { continued: true }).font('Helvetica').text(subjectName);
+        // Row 1 Text
+        const r1Y = boxY + 4;
+        doc.font('Helvetica-Bold').fontSize(metaFontSize)
+          .text('PROGRAMME : ', col1X, r1Y, { continued: true, width: col1W })
+          .font('Helvetica').text(programme, { width: col1W });
 
-        // Row 3
-        doc.font('Helvetica-Bold').text('ASSESSMENT DATE : ', 42, boxY + 36, { continued: true }).font('Helvetica').text(assessmentDate);
-        doc.font('Helvetica-Bold').text('Conducted : ', 305, boxY + 36, { continued: true }).font('Helvetica').text(conducted);
+        doc.font('Helvetica-Bold').fontSize(metaFontSize)
+          .text('BATCH / SEC. : ', col2X, r1Y, { continued: true, width: col2W })
+          .font('Helvetica').text(batchSec, { width: col2W });
 
-        // Main Table Header (Y: 178, height: 26)
-        const tableY = 178;
+        // Row 2 Text
+        const r2Y = div1Y + 4;
+        doc.font('Helvetica-Bold').fontSize(metaFontSize)
+          .text('Name of the Faculty : ', col1X, r2Y, { continued: true, width: col1W })
+          .font('Helvetica').text(facultyName, { width: col1W });
+
+        doc.font('Helvetica-Bold').fontSize(metaFontSize)
+          .text('Subject Name : ', col2X, r2Y, { continued: true, width: col2W })
+          .font('Helvetica').text(subjectName, { width: col2W });
+
+        // Row 3 Text
+        const r3Y = div2Y + 4;
+        doc.font('Helvetica-Bold').fontSize(metaFontSize)
+          .text('ASSESSMENT DATE : ', col1X, r3Y, { continued: true, width: col1W })
+          .font('Helvetica').text(assessmentDate, { width: col1W });
+
+        doc.font('Helvetica-Bold').fontSize(metaFontSize)
+          .text('Conducted : ', col2X, r3Y, { continued: true, width: col2W })
+          .font('Helvetica').text(conducted, { width: col2W });
+
+        // Main Table Header placed dynamically beneath metadata box
+        const tableY = boxY + totalBoxHeight + 6;
         doc.rect(36, tableY, 523, 26).strokeColor('#000000').lineWidth(0.75).stroke();
 
         const colLines = [72, 177, 369, 429, 494];
