@@ -31,6 +31,7 @@ model User {
   auditLogs      AuditLog[]
   generatedReports Report[]     @relation("GeneratedReports")
   receivedReports  Report[]     @relation("ReceivedReports")
+  feedbacks        AssessmentFeedback[]
 }
 
 model StudentProfile {
@@ -142,6 +143,7 @@ model Assessment {
   results            AssessmentResult[]
   suspiciousEvents   SuspiciousEvent[]
   reports            Report[]
+  feedbacks          AssessmentFeedback[]
 }
 
 model AssessmentQuestion {
@@ -278,4 +280,21 @@ model Report {
   generatedBy  User        @relation("GeneratedReports", fields: [generatedById], references: [id])
   summaryJson  String?     // Stored metrics JSON for immutable historical view
   createdAt    DateTime    @default(now())
+}
+
+model AssessmentFeedback {
+  id                               String     @id @default(uuid())
+  assessmentId                     String
+  assessment                       Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId                        String
+  student                          User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  overallCodingSkillsRating        Int        // 1 to 5 Stars: How would you rate your overall coding skills after the training?
+  basicConceptsUnderstandingRating Int        // 1 to 5 Stars: How well do you understand basic programming concepts?
+  problemSolvingRating             Int        // 1 to 5 Stars: How rate yourself to solving the coding problems?
+  difficultyLevelRating            Int        // 1 to 5 Stars: How would you rate the difficulty level of the coding skills?
+  debuggingAbilityRating           Int        // 1 to 5 Stars: How well can you identify and debug errors in your code?
+  suggestions                      String?    // Written feedback: Improvements or additional support would you suggest for aptitude and coding training
+  submittedAt                      DateTime   @default(now())
+
+  @@unique([assessmentId, studentId])
 }

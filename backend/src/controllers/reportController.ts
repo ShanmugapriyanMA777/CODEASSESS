@@ -10,9 +10,9 @@ export async function downloadStudentPdfReport(req: AuthRequest, res: Response) 
     const { studentId } = req.params;
     const { assessmentId } = req.query;
 
-    // Report downloads are strictly restricted to Administrators
-    if (req.user?.role !== 'ADMIN') {
-      return sendError(res, 'Access denied. Report downloads are restricted to administrators only.', 403);
+    // Report downloads are strictly restricted to Administrators or Faculty
+    if (req.user?.role !== 'ADMIN' && req.user?.role !== 'FACULTY') {
+      return sendError(res, 'Access denied. Report downloads are restricted to administrators or faculty only.', 403);
     }
 
     const student = await prisma.user.findUnique({
@@ -520,6 +520,264 @@ export async function downloadClassStatementPdf(req: AuthRequest, res: Response)
     return res.end(pdfBuffer);
   } catch (err: any) {
     console.error('Error generating class statement PDF:', err);
+    return sendError(res, err.message || 'Failed to generate PDF report', 500);
+  }
+}
+
+/**
+ * Shared helper to compile class training feedback data with 5-star ratings & text suggestions
+ */
+async function buildClassFeedbackPayload(req: AuthRequest) {
+  const {
+    assessmentId,
+    batchId,
+    institutionName,
+    subHeader,
+    accreditation,
+    location,
+    programme,
+    batchSec,
+    assessmentDate,
+    conducted,
+    facultyName,
+    subjectName,
+    subjectCode,
+  } = req.query;
+
+  // 1. Resolve Assessment
+  let assessment: any = null;
+  if (assessmentId && assessmentId !== 'ALL') {
+    assessment = await prisma.assessment.findUnique({
+      where: { id: assessmentId as string },
+    });
+  } else {
+    assessment = await prisma.assessment.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // 2. Resolve Batch
+  let batch: any = null;
+  if (batchId && batchId !== 'ALL') {
+    batch = await prisma.batch.findUnique({
+      where: { id: batchId as string },
+    });
+  }
+
+  // 3. Find Feedbacks for this assessment, optionally filtered by student's batch
+  const feedbackWhere: any = {};
+  if (assessment) {
+    feedbackWhere.assessmentId = assessment.id;
+  }
+  if (batch) {
+    feedbackWhere.student = {
+      studentProfile: {
+        batchId: batch.id,
+      },
+    };
+  }
+
+  const feedbacks = await prisma.assessmentFeedback.findMany({
+    where: feedbackWhere,
+    include: {
+      student: {
+        include: {
+          studentProfile: {
+            include: { batch: true },
+          },
+        },
+      },
+      assessment: true,
+    },
+    orderBy: [
+      { student: { studentProfile: { rollNumber: 'asc' } } },
+      { submittedAt: 'asc' },
+    ],
+  });
+
+  // Calculate metrics
+  const totalResponses = feedbacks.length;
+  let sumOverallSkills = 0;
+  let sumBasicConcepts = 0;
+  let sumProblemSolving = 0;
+  let sumDifficultyLevel = 0;
+  let sumDebuggingAbility = 0;
+
+  const records = feedbacks.map((f, idx) => {
+    sumOverallSkills += f.overallCodingSkillsRating;
+    sumBasicConcepts += f.basicConceptsUnderstandingRating;
+    sumProblemSolving += f.problemSolvingRating;
+    sumDifficultyLevel += f.difficultyLevelRating;
+    sumDebuggingAbility += f.debuggingAbilityRating;
+
+    return {
+      sNo: idx + 1,
+      id: f.id,
+      studentId: f.studentId,
+      registerNumber: f.student.studentProfile?.rollNumber || '312824104000',
+      studentName: f.student.name.toUpperCase(),
+      overallSkills: f.overallCodingSkillsRating,
+      basicConcepts: f.basicConceptsUnderstandingRating,
+      problemSolving: f.problemSolvingRating,
+      difficultyLevel: f.difficultyLevelRating,
+      debuggingAbility: f.debuggingAbilityRating,
+      suggestions: f.suggestions || '',
+      submittedAt: f.submittedAt,
+    };
+  });
+
+  const summaryMetrics = {
+    totalResponses,
+    avgOverallSkills: totalResponses > 0 ? parseFloat((sumOverallSkills / totalResponses).toFixed(2)) : 0,
+    avgBasicConcepts: totalResponses > 0 ? parseFloat((sumBasicConcepts / totalResponses).toFixed(2)) : 0,
+    avgProblemSolving: totalResponses > 0 ? parseFloat((sumProblemSolving / totalResponses).toFixed(2)) : 0,
+    avgDifficultyLevel: totalResponses > 0 ? parseFloat((sumDifficultyLevel / totalResponses).toFixed(2)) : 0,
+    avgDebuggingAbility: totalResponses > 0 ? parseFloat((sumDebuggingAbility / totalResponses).toFixed(2)) : 0,
+  };
+
+  const resolvedAssessmentDate =
+    (assessmentDate as string) ||
+    (assessment?.startTime
+      ? new Date(assessment.startTime).toLocaleDateString('en-GB').replace(/\//g, '-')
+      : new Date().toLocaleDateString('en-GB').replace(/\//g, '-'));
+
+  const metadata = {
+    institutionName: (institutionName as string) || 'AGNI COLLEGE OF TECHNOLOGY',
+    subHeader: (subHeader as string) || '(An Autonomous Institution, Affiliated to Anna University, Chennai.)',
+    accreditation: (accreditation as string) || "Approved by AICTE, Accredited by NAAC with 'A+' Grade",
+    location: (location as string) || 'OMR, Navalur, Thalambur, Chennai.-600130',
+    programme: (programme as string) || (batch ? `B.E. ${batch.name.toUpperCase()}` : 'B.E. COMPUTER SCIENCE AND ENGINEERING'),
+    batchSec: (batchSec as string) || (batch ? `${batch.academicYear || '2024'} / ${batch.code}` : '2024 / C'),
+    assessmentDate: resolvedAssessmentDate,
+    conducted: (conducted as string) || '2 Hours',
+    facultyName: (facultyName as string) || req.user?.name || 'Mrs. VARSHA',
+    subjectName: (subjectName as string) || assessment?.title?.toUpperCase() || 'CORE PROGRAMMING & APTITUDE',
+    subjectCode: (subjectCode as string) || '24CS501',
+    batchId: batch?.id || 'ALL',
+    batchName: batch?.name || 'All Classes',
+    assessmentId: assessment?.id || '',
+    assessmentTitle: assessment?.title || 'Coding Assessment',
+  };
+
+  return { metadata, summaryMetrics, records, assessment, batch };
+}
+
+/**
+ * GET /api/reports/class-feedback
+ * Live preview of training feedback responses and summary metrics
+ */
+export async function getClassFeedbackData(req: AuthRequest, res: Response) {
+  try {
+    const payload = await buildClassFeedbackPayload(req);
+    return sendSuccess(res, payload);
+  } catch (err: any) {
+    console.error('Error fetching class feedback data:', err);
+    return sendError(res, err.message || 'Failed to fetch class feedback data', 500);
+  }
+}
+
+/**
+ * GET /api/reports/class-feedback/csv
+ * Exports feedback report in CSV format
+ */
+export async function downloadClassFeedbackCsv(req: AuthRequest, res: Response) {
+  try {
+    const { metadata, summaryMetrics, records } = await buildClassFeedbackPayload(req);
+
+    const lines: string[] = [
+      `"${metadata.institutionName}"`,
+      `"${metadata.subHeader}"`,
+      `"${metadata.accreditation}"`,
+      `"${metadata.location}"`,
+      '"STUDENT TRAINING FEEDBACK & SKILL EVALUATION REPORT"',
+      '',
+      `"PROGRAMME : ${metadata.programme}","BATCH / SEC. : ${metadata.batchSec}"`,
+      `"FACULTY : ${metadata.facultyName}","SUBJECT : ${metadata.subjectName}"`,
+      `"ASSESSMENT DATE : ${metadata.assessmentDate}","CONDUCTED : ${metadata.conducted}"`,
+      '',
+      '"OVERALL CLASS FEEDBACK METRICS (5-STAR SCALE):"',
+      `"Overall Skills Rating Average","${summaryMetrics.avgOverallSkills} / 5 Stars"`,
+      `"Basic Concepts Understanding Average","${summaryMetrics.avgBasicConcepts} / 5 Stars"`,
+      `"Problem Solving Rating Average","${summaryMetrics.avgProblemSolving} / 5 Stars"`,
+      `"Difficulty Level Rating Average","${summaryMetrics.avgDifficultyLevel} / 5 Stars"`,
+      `"Error Debugging Rating Average","${summaryMetrics.avgDebuggingAbility} / 5 Stars"`,
+      `"Total Student Responses","${summaryMetrics.totalResponses}"`,
+      '',
+      'S.NO,REGISTER NUMBER,NAME OF THE STUDENT,OVERALL SKILLS (1-5),BASIC CONCEPTS (1-5),PROBLEM SOLVING (1-5),DIFFICULTY LEVEL (1-5),DEBUGGING ABILITY (1-5),SUGGESTIONS & IMPROVEMENTS',
+    ];
+
+    records.forEach((r) => {
+      lines.push(
+        `${r.sNo},${r.registerNumber},"${r.studentName.replace(/"/g, '""')}",${r.overallSkills},${r.basicConcepts},${r.problemSolving},${r.difficultyLevel},${r.debuggingAbility},"${r.suggestions.replace(/"/g, '""')}"`
+      );
+    });
+
+    lines.push('');
+    lines.push(`"Signature of the Faculty : ${metadata.facultyName}","","","","","","","Signature of the HoD."`);
+
+    const csvContent = lines.join('\r\n');
+    const safeBatch = (metadata.batchName || 'Overall').replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `class_feedback_report_${safeBatch}_${Date.now()}.csv`;
+
+    await logAuditEvent({
+      userId: req.user!.id,
+      action: 'REPORT_GENERATED',
+      entityType: 'REPORT',
+      details: `Downloaded CSV Class Feedback Report for ${metadata.batchName} (${metadata.subjectName})`,
+      ipAddress: req.ip,
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(csvContent);
+  } catch (err: any) {
+    console.error('Error generating class feedback CSV:', err);
+    return sendError(res, err.message || 'Failed to generate CSV report', 500);
+  }
+}
+
+/**
+ * GET /api/reports/class-feedback/pdf
+ * Generates and downloads the institutional PDF feedback report
+ */
+export async function downloadClassFeedbackPdf(req: AuthRequest, res: Response) {
+  try {
+    const { metadata, summaryMetrics, records } = await buildClassFeedbackPayload(req);
+
+    const pdfBuffer = await pdfReportService.generateClassFeedbackPdf({
+      institutionName: metadata.institutionName,
+      subHeader: metadata.subHeader,
+      accreditation: metadata.accreditation,
+      location: metadata.location,
+      programme: metadata.programme,
+      batchSec: metadata.batchSec,
+      assessmentDate: metadata.assessmentDate,
+      conducted: metadata.conducted,
+      facultyName: metadata.facultyName,
+      subjectName: metadata.subjectName,
+      subjectCode: metadata.subjectCode,
+      summaryMetrics,
+      records,
+    });
+
+    const safeBatch = (metadata.batchName || 'Overall').replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `class_feedback_report_${safeBatch}_${Date.now()}.pdf`;
+
+    await logAuditEvent({
+      userId: req.user!.id,
+      action: 'REPORT_GENERATED',
+      entityType: 'REPORT',
+      details: `Downloaded PDF Class Feedback Report for ${metadata.batchName} (${metadata.subjectName})`,
+      ipAddress: req.ip,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    return res.end(pdfBuffer);
+  } catch (err: any) {
+    console.error('Error generating class feedback PDF:', err);
     return sendError(res, err.message || 'Failed to generate PDF report', 500);
   }
 }

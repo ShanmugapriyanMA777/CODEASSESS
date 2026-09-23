@@ -191,3 +191,61 @@ export interface TestCaseResult {
   memoryUsed: number;
   error?: string;
 }
+
+export interface AssessmentFeedback {
+  id?: string;
+  assessmentId: string;
+  studentId?: string;
+  overallCodingSkillsRating: number;
+  basicConceptsUnderstandingRating: number;
+  problemSolvingRating: number;
+  difficultyLevelRating: number;
+  debuggingAbilityRating: number;
+  suggestions?: string;
+  submittedAt?: string;
+}
+
+export interface ClassFeedbackRecord {
+  sNo: number;
+  id: string;
+  studentId: string;
+  registerNumber: string;
+  studentName: string;
+  overallSkills: number;
+  basicConcepts: number;
+  problemSolving: number;
+  difficultyLevel: number;
+  debuggingAbility: number;
+  suggestions: string;
+  submittedAt: string;
+}
+
+export interface ClassFeedbackSummary {
+  metadata: {
+    institutionName: string;
+    subHeader: string;
+    accreditation: string;
+    location: string;
+    programme: string;
+    batchSec: string;
+    assessmentDate: string;
+    conducted: string;
+    facultyName: string;
+    subjectName: string;
+    subjectCode: string;
+    batchId: string;
+    batchName: string;
+    assessmentId: string;
+    assessmentTitle: string;
+  };
+  summaryMetrics: {
+    totalResponses: number;
+    avgOverallSkills: number;
+    avgBasicConcepts: number;
+    avgProblemSolving: number;
+    avgDifficultyLevel: number;
+    avgDebuggingAbility: number;
+  };
+  records: ClassFeedbackRecord[];
+}
+

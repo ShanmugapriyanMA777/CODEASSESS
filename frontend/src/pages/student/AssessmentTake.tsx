@@ -17,6 +17,8 @@ import {
   ChevronRight,
   Sparkles,
   FileText,
+  Star,
+  MessageSquare,
 } from 'lucide-react';
 
 const CANNED_SIGNATURES = [
@@ -39,6 +41,69 @@ const CANNED_SIGNATURES = [
 const isCannedSolution = (code?: string | null) => {
   if (!code) return false;
   return CANNED_SIGNATURES.some((sig) => code.includes(sig));
+};
+
+interface StarRatingInputProps {
+  label: string;
+  questionNumber: number;
+  value: number;
+  onChange: (val: number) => void;
+}
+
+const StarRatingInput: React.FC<StarRatingInputProps> = ({
+  label,
+  questionNumber,
+  value,
+  onChange,
+}) => {
+  const [hoverVal, setHoverVal] = useState<number | null>(null);
+  const labels = ['', 'Poor (1)', 'Fair (2)', 'Good (3)', 'Very Good (4)', 'Excellent (5)'];
+  const displayVal = hoverVal || value;
+
+  return (
+    <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 transition hover:border-slate-750 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <label className="text-xs font-semibold text-slate-200 leading-snug">
+          <span className="text-amber-400 font-bold mr-1.5">Q{questionNumber}.</span>
+          {label}
+        </label>
+        <span
+          className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+            displayVal > 0
+              ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20'
+              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+          }`}
+        >
+          {displayVal > 0 ? labels[displayVal] : 'Required ★'}
+        </span>
+      </div>
+
+      <div className="flex items-center space-x-1.5 pt-0.5">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const active = displayVal >= star;
+          return (
+            <button
+              key={star}
+              type="button"
+              onClick={() => onChange(star)}
+              onMouseEnter={() => setHoverVal(star)}
+              onMouseLeave={() => setHoverVal(null)}
+              className="p-1 transition transform hover:scale-125 focus:outline-none cursor-pointer"
+              title={`${star} Star${star > 1 ? 's' : ''}`}
+            >
+              <Star
+                className={`w-6 h-6 transition-colors ${
+                  active
+                    ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                    : 'text-slate-600 hover:text-slate-400'
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 export const AssessmentTake: React.FC = () => {
@@ -72,6 +137,19 @@ export const AssessmentTake: React.FC = () => {
   const [fullscreenAlert, setFullscreenAlert] = useState<boolean>(false);
   const [finishModalOpen, setFinishModalOpen] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<'problem' | 'code'>('problem');
+
+  // Mandatory Feedback Ratings (Q1-Q5 Stars, Q6 Written)
+  const [feedbackRatings, setFeedbackRatings] = useState({
+    q1: 0,
+    q2: 0,
+    q3: 0,
+    q4: 0,
+    q5: 0,
+  });
+  const [feedbackSuggestions, setFeedbackSuggestions] = useState('');
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   const timerRef = useRef<any>(null);
   const autoSaveRef = useRef<any>(null);
@@ -158,7 +236,8 @@ export const AssessmentTake: React.FC = () => {
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
-          handleFinishAssessment(true); // Auto-submit when timer expires
+          setIsTimeUp(true);
+          setFinishModalOpen(true); // Open feedback modal when timer expires
           return 0;
         }
         return prev - 1;
@@ -387,13 +466,37 @@ export const AssessmentTake: React.FC = () => {
     }
   };
 
-  // Finish Assessment
-  const handleFinishAssessment = async (autoSubmitted = false) => {
+  // Finish Assessment with Mandatory Feedback Submission
+  const handleFinishAssessmentWithFeedback = async () => {
     if (!assessment) return;
+
+    if (
+      !feedbackRatings.q1 ||
+      !feedbackRatings.q2 ||
+      !feedbackRatings.q3 ||
+      !feedbackRatings.q4 ||
+      !feedbackRatings.q5 ||
+      !feedbackSuggestions.trim()
+    ) {
+      setFeedbackError('Please provide 1-5 star ratings for all 5 questions and write your suggestions before submitting.');
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    setFeedbackError(null);
+
     try {
       const res = await api.post('/results/finish', {
         assessmentId: assessment.id,
-        autoSubmitted,
+        autoSubmitted: isTimeUp,
+        feedback: {
+          overallCodingSkillsRating: feedbackRatings.q1,
+          basicConceptsUnderstandingRating: feedbackRatings.q2,
+          problemSolvingRating: feedbackRatings.q3,
+          difficultyLevelRating: feedbackRatings.q4,
+          debuggingAbilityRating: feedbackRatings.q5,
+          suggestions: feedbackSuggestions.trim(),
+        },
       });
 
       if (res.data.success) {
@@ -403,7 +506,9 @@ export const AssessmentTake: React.FC = () => {
         navigate(`/student/assessment/${assessment.id}/result`);
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to complete assessment');
+      setFeedbackError(err.response?.data?.message || 'Failed to submit feedback and finalize assessment');
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -432,6 +537,15 @@ export const AssessmentTake: React.FC = () => {
   }
 
   const solvedCount = Object.values(questionStatuses).filter((s) => s === 'ACCEPTED').length;
+  const ratedCount = [
+    feedbackRatings.q1,
+    feedbackRatings.q2,
+    feedbackRatings.q3,
+    feedbackRatings.q4,
+    feedbackRatings.q5,
+  ].filter((r) => r > 0).length;
+  const hasWrittenSuggestions = feedbackSuggestions.trim().length > 0;
+  const isFeedbackComplete = ratedCount === 5 && hasWrittenSuggestions;
 
   return (
     <div className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden select-none">
@@ -910,30 +1024,192 @@ export const AssessmentTake: React.FC = () => {
         </div>
       </div>
 
-      {/* FINISH ASSESSMENT CONFIRMATION MODAL */}
+      {/* MANDATORY POST-ASSESSMENT TRAINING FEEDBACK MODAL */}
       {finishModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-white">Finalize & Submit Assessment?</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              You have currently solved <span className="text-emerald-400 font-bold">{solvedCount}</span> of <span className="text-white font-bold">{questions.length}</span> questions.
-              Once submitted, you will receive your final evaluation marks, ranking, and performance scorecard.
-            </p>
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 flex-shrink-0">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Mandatory Feedback
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Agni College of Technology
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    Training Feedback & Assessment Submission
+                  </h3>
+                </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-2">
+                {/* Progress Indicators */}
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                      ratedCount === 5
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
+                    {ratedCount}/5 Stars
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      hasWrittenSuggestions
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                    }`}
+                  >
+                    {hasWrittenSuggestions ? 'Written: Done' : 'Written: Pending'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Banner */}
+              {isTimeUp ? (
+                <div className="mt-3 p-2.5 rounded-lg bg-rose-950/50 border border-rose-800/60 text-xs text-rose-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                  <span>
+                    <strong>Assessment Time Has Concluded.</strong> Your answers have been preserved. Submit your feedback below to generate your final marks and class rankings.
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+                  You have solved <span className="text-emerald-400 font-bold">{solvedCount}</span> of <span className="text-white font-bold">{questions.length}</span> questions.
+                  Please complete the following training feedback. Students can only navigate to the scorecard and submit after completing all 5 star ratings and written feedback.
+                </p>
+              )}
+            </div>
+
+            {/* Scrollable Questions Body */}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1 text-slate-200">
+              {/* Question 1 */}
+              <StarRatingInput
+                questionNumber={1}
+                label="How would you rate your overall coding skills after the training?"
+                value={feedbackRatings.q1}
+                onChange={(val) => setFeedbackRatings((prev) => ({ ...prev, q1: val }))}
+              />
+
+              {/* Question 2 */}
+              <StarRatingInput
+                questionNumber={2}
+                label="How well do you understand basic programming concepts?"
+                value={feedbackRatings.q2}
+                onChange={(val) => setFeedbackRatings((prev) => ({ ...prev, q2: val }))}
+              />
+
+              {/* Question 3 */}
+              <StarRatingInput
+                questionNumber={3}
+                label="How do you rate yourself in solving the coding problems?"
+                value={feedbackRatings.q3}
+                onChange={(val) => setFeedbackRatings((prev) => ({ ...prev, q3: val }))}
+              />
+
+              {/* Question 4 */}
+              <StarRatingInput
+                questionNumber={4}
+                label="How would you rate the difficulty level of the coding skills?"
+                value={feedbackRatings.q4}
+                onChange={(val) => setFeedbackRatings((prev) => ({ ...prev, q4: val }))}
+              />
+
+              {/* Question 5 */}
+              <StarRatingInput
+                questionNumber={5}
+                label="How well can you identify and debug errors in your code?"
+                value={feedbackRatings.q5}
+                onChange={(val) => setFeedbackRatings((prev) => ({ ...prev, q5: val }))}
+              />
+
+              {/* Question 6 - Written Text */}
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 transition hover:border-slate-750 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <label htmlFor="feedback-suggestions" className="text-xs font-semibold text-slate-200 leading-snug">
+                    <span className="text-amber-400 font-bold mr-1.5">Q6.</span>
+                    Improvements or additional support would you suggest for aptitude and coding training
+                  </label>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                      hasWrittenSuggestions
+                        ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}
+                  >
+                    {hasWrittenSuggestions ? 'Written ✓' : 'Required *'}
+                  </span>
+                </div>
+
+                <textarea
+                  id="feedback-suggestions"
+                  rows={3}
+                  value={feedbackSuggestions}
+                  onChange={(e) => setFeedbackSuggestions(e.target.value)}
+                  placeholder="Please write your suggestions, areas where you need additional support, topics you'd like more practice on..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition resize-none"
+                />
+                <div className="flex justify-between items-center text-[10px] text-slate-500">
+                  <span>Your written feedback helps faculty tailor upcoming training sessions.</span>
+                  <span>{feedbackSuggestions.trim().length} characters</span>
+                </div>
+              </div>
+
+              {/* Validation Error Banner */}
+              {feedbackError && (
+                <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-xs text-rose-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                  <span>{feedbackError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-3 flex-shrink-0">
+              {!isTimeUp ? (
+                <button
+                  type="button"
+                  onClick={() => setFinishModalOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer"
+                >
+                  Continue Assessment
+                </button>
+              ) : (
+                <span className="text-[11px] text-slate-500 italic">
+                  Time expired &mdash; Submission mandatory
+                </span>
+              )}
+
               <button
                 type="button"
-                onClick={() => setFinishModalOpen(false)}
-                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                onClick={handleFinishAssessmentWithFeedback}
+                disabled={!isFeedbackComplete || submittingFeedback}
+                title={
+                  !isFeedbackComplete
+                    ? 'Please rate all 5 star questions and write your suggestions before submitting.'
+                    : 'Submit your assessment and view your final scorecard.'
+                }
+                className={`flex items-center space-x-2 px-5 py-2.5 rounded-lg text-xs font-bold transition shadow-lg cursor-pointer ${
+                  isFeedbackComplete && !submittingFeedback
+                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/30'
+                    : 'bg-slate-800 text-slate-500 border border-slate-700/50 cursor-not-allowed'
+                }`}
               >
-                Continue Assessment
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFinishAssessment(false)}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/25"
-              >
-                Yes, Submit Now
+                {submittingFeedback ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Submitting Feedback...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Submit Feedback & View Results</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

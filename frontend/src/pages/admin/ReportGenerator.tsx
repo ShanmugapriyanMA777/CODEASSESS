@@ -18,15 +18,17 @@ import {
   Shield,
   Clock,
   CheckSquare,
+  Star,
+  MessageSquare,
 } from 'lucide-react';
 
 export const ReportGenerator: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'statement' | 'individual'>('statement');
+  const [activeTab, setActiveTab] = useState<'statement' | 'feedback' | 'individual'>('statement');
   const [batches, setBatches] = useState<Batch[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [students, setStudents] = useState<User[]>([]);
 
-  // Selection states for Class Statement
+  // Selection states for Class Statement & Feedback
   const [selectedBatchId, setSelectedBatchId] = useState<string>('ALL');
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
   const [completedOnly, setCompletedOnly] = useState<boolean>(true);
@@ -36,6 +38,12 @@ export const ReportGenerator: React.FC = () => {
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [downloadingCsv, setDownloadingCsv] = useState<boolean>(false);
   const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+
+  // Feedback Report Data & Loading
+  const [feedbackData, setFeedbackData] = useState<any | null>(null);
+  const [loadingFeedback, setLoadingFeedback] = useState<boolean>(false);
+  const [downloadingFeedbackCsv, setDownloadingFeedbackCsv] = useState<boolean>(false);
+  const [downloadingFeedbackPdf, setDownloadingFeedbackPdf] = useState<boolean>(false);
 
   // Template Customization Settings
   const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -157,6 +165,41 @@ export const ReportGenerator: React.FC = () => {
   useEffect(() => {
     fetchStatementData();
   }, [selectedBatchId, selectedAssessmentId, completedOnly]);
+
+  // Fetch feedback data when feedback tab is active or filters change
+  const fetchFeedbackData = async () => {
+    setLoadingFeedback(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedBatchId) params.append('batchId', selectedBatchId);
+      if (selectedAssessmentId) params.append('assessmentId', selectedAssessmentId);
+      params.append('institutionName', institutionName);
+      params.append('subHeader', subHeader);
+      params.append('accreditation', accreditation);
+      params.append('location', location);
+      params.append('programme', programme);
+      params.append('batchSec', batchSec);
+      params.append('facultyName', facultyName);
+      params.append('subjectName', subjectName);
+      params.append('assessmentDate', assessmentDate);
+      params.append('conducted', conducted);
+
+      const res = await api.get(`/reports/class-feedback?${params.toString()}`);
+      if (res.data.success) {
+        setFeedbackData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch class feedback data:', err);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'feedback') {
+      fetchFeedbackData();
+    }
+  }, [activeTab, selectedBatchId, selectedAssessmentId]);
 
   // Fetch individual student preview data
   const fetchStudentPreview = async (studentId: string, assessmentId?: string) => {
@@ -289,6 +332,80 @@ export const ReportGenerator: React.FC = () => {
     }
   };
 
+  // Download Class Feedback CSV
+  const handleDownloadFeedbackCsv = async () => {
+    setDownloadingFeedbackCsv(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedBatchId) params.append('batchId', selectedBatchId);
+      if (selectedAssessmentId) params.append('assessmentId', selectedAssessmentId);
+      params.append('institutionName', institutionName);
+      params.append('subHeader', subHeader);
+      params.append('accreditation', accreditation);
+      params.append('location', location);
+      params.append('programme', programme);
+      params.append('batchSec', batchSec);
+      params.append('facultyName', facultyName);
+      params.append('subjectName', subjectName);
+      params.append('assessmentDate', assessmentDate);
+      params.append('conducted', conducted);
+
+      const res = await api.get(`/reports/class-feedback/csv?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const batchNameSafe = (feedbackData?.metadata?.batchName || 'Overall').replace(/\s+/g, '_');
+      link.setAttribute('download', `class_feedback_report_${batchNameSafe}_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert('Failed to download Class Feedback CSV report');
+    } finally {
+      setDownloadingFeedbackCsv(false);
+    }
+  };
+
+  // Download Class Feedback PDF
+  const handleDownloadFeedbackPdf = async () => {
+    setDownloadingFeedbackPdf(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedBatchId) params.append('batchId', selectedBatchId);
+      if (selectedAssessmentId) params.append('assessmentId', selectedAssessmentId);
+      params.append('institutionName', institutionName);
+      params.append('subHeader', subHeader);
+      params.append('accreditation', accreditation);
+      params.append('location', location);
+      params.append('programme', programme);
+      params.append('batchSec', batchSec);
+      params.append('facultyName', facultyName);
+      params.append('subjectName', subjectName);
+      params.append('assessmentDate', assessmentDate);
+      params.append('conducted', conducted);
+
+      const res = await api.get(`/reports/class-feedback/pdf?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const batchNameSafe = (feedbackData?.metadata?.batchName || 'Overall').replace(/\s+/g, '_');
+      link.setAttribute('download', `class_feedback_report_${batchNameSafe}_${Date.now()}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert('Failed to generate Class Feedback PDF report');
+    } finally {
+      setDownloadingFeedbackPdf(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -346,6 +463,17 @@ export const ReportGenerator: React.FC = () => {
           >
             <Building2 className="w-3.5 h-3.5" />
             <span>Class Assessment Report</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('feedback')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition ${
+              activeTab === 'feedback'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Star className="w-3.5 h-3.5" />
+            <span>Class Training Feedback</span>
           </button>
           <button
             onClick={() => setActiveTab('individual')}
@@ -732,6 +860,303 @@ export const ReportGenerator: React.FC = () => {
                   <div className="text-center space-y-1.5">
                     <div className="w-52 border-b border-black mb-1 mx-auto" />
                     <p className="font-normal">Name of the Faculty</p>
+                  </div>
+                  <div className="text-center space-y-1.5">
+                    <div className="w-52 border-b border-black mb-1 mx-auto" />
+                    <p className="font-normal">Signature of the HoD.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : activeTab === 'feedback' ? (
+        /* TAB 2: CLASS TRAINING FEEDBACK & EVALUATION REPORT */
+        <div className="space-y-6">
+          {/* Controls Card */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              {/* Class / Batch Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1.5">
+                  <Layers className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Select Class / Batch</span>
+                </label>
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
+                >
+                  <option value="ALL">All Batches (Aggregate Feedback)</option>
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.academicYear || '2024'} - {b.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Assessment Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1.5">
+                  <Award className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Select Assessment</span>
+                </label>
+                <select
+                  value={selectedAssessmentId}
+                  onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
+                >
+                  {assessments.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Action Buttons: PDF & CSV Downloads */}
+              <div className="md:col-span-2 flex items-center gap-2">
+                <button
+                  onClick={handleDownloadFeedbackPdf}
+                  disabled={downloadingFeedbackPdf || loadingFeedback}
+                  className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold transition shadow-lg shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
+                  title="Download Class Feedback Report as PDF"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{downloadingFeedbackPdf ? 'Generating PDF...' : 'Download Feedback (PDF)'}</span>
+                </button>
+
+                <button
+                  onClick={handleDownloadFeedbackCsv}
+                  disabled={downloadingFeedbackCsv || loadingFeedback}
+                  className="flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold border border-slate-700 transition disabled:opacity-50 cursor-pointer"
+                  title="Download Feedback Data as CSV"
+                >
+                  <Download className="w-4 h-4 text-emerald-400" />
+                  <span>{downloadingFeedbackCsv ? 'Exporting...' : 'Download Feedback (CSV)'}</span>
+                </button>
+
+                <button
+                  onClick={handlePrint}
+                  className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
+                  title="Print Report"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={fetchFeedbackData}
+                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition cursor-pointer"
+                  title="Refresh Feedback Data"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loadingFeedback ? 'animate-spin text-amber-400' : ''}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 5-STAR SUMMARY KPI CARDS */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Skills</span>
+              <div className="flex items-center space-x-1.5 mt-2">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span className="text-xl font-black text-white">
+                  {feedbackData?.summaryMetrics?.avgOverallSkills?.toFixed(1) || '0.0'}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">/ 5</span>
+              </div>
+              <span className="text-[10px] text-amber-400/80 font-medium mt-1">Overall Coding Rating</span>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Basic Concepts</span>
+              <div className="flex items-center space-x-1.5 mt-2">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span className="text-xl font-black text-white">
+                  {feedbackData?.summaryMetrics?.avgBasicConcepts?.toFixed(1) || '0.0'}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">/ 5</span>
+              </div>
+              <span className="text-[10px] text-amber-400/80 font-medium mt-1">Concepts Clarity</span>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Problem Solving</span>
+              <div className="flex items-center space-x-1.5 mt-2">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span className="text-xl font-black text-white">
+                  {feedbackData?.summaryMetrics?.avgProblemSolving?.toFixed(1) || '0.0'}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">/ 5</span>
+              </div>
+              <span className="text-[10px] text-amber-400/80 font-medium mt-1">Algorithm Solving</span>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Difficulty Level</span>
+              <div className="flex items-center space-x-1.5 mt-2">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span className="text-xl font-black text-white">
+                  {feedbackData?.summaryMetrics?.avgDifficultyLevel?.toFixed(1) || '0.0'}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">/ 5</span>
+              </div>
+              <span className="text-[10px] text-amber-400/80 font-medium mt-1">Challenge Rating</span>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Error Debugging</span>
+              <div className="flex items-center space-x-1.5 mt-2">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span className="text-xl font-black text-white">
+                  {feedbackData?.summaryMetrics?.avgDebuggingAbility?.toFixed(1) || '0.0'}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">/ 5</span>
+              </div>
+              <span className="text-[10px] text-amber-400/80 font-medium mt-1">Debugging Errors</span>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Responses</span>
+              <div className="flex items-center space-x-1.5 mt-2">
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                <span className="text-xl font-black text-white">
+                  {feedbackData?.summaryMetrics?.totalResponses || 0}
+                </span>
+                <span className="text-xs text-slate-500 font-semibold">Students</span>
+              </div>
+              <span className="text-[10px] text-emerald-400/80 font-medium mt-1">Completed Feedback</span>
+            </div>
+          </div>
+
+          {/* OFFICIAL CLASS FEEDBACK DOCUMENT PREVIEW CONTAINER */}
+          <div className="bg-white text-slate-950 rounded-2xl shadow-2xl p-4 sm:p-8 border border-slate-200 overflow-x-auto print:p-0 print:shadow-none print:border-none">
+            {loadingFeedback ? (
+              <div className="py-24 text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto" />
+                <p className="text-xs text-slate-500 font-semibold mt-3">Loading Class Feedback evaluation data...</p>
+              </div>
+            ) : (
+              <div className="min-w-[750px] max-w-[920px] mx-auto font-sans">
+                {/* Official Agni College Banner Logo */}
+                <div className="flex justify-center mb-1">
+                  <img
+                    src="/agni_logo.png"
+                    alt="Agni College of Technology"
+                    className="w-full max-h-24 object-contain mx-auto"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+
+                {/* Subtitle & Institutional Accreditation Header */}
+                <div className="text-center space-y-0.5 mb-3 text-xs">
+                  <h2 className="text-sm font-black tracking-tight text-black uppercase">
+                    {feedbackData?.metadata?.institutionName || institutionName}
+                  </h2>
+                  <p className="text-[11px] text-black">
+                    {feedbackData?.metadata?.subHeader || subHeader}
+                  </p>
+                  <p className="text-[10px] font-semibold text-black">
+                    {feedbackData?.metadata?.accreditation || accreditation}
+                  </p>
+                  <p className="text-[10px] text-black">
+                    {feedbackData?.metadata?.location || location}
+                  </p>
+                  <div className="border-b border-black pt-2 mb-2" />
+                  <h3 className="text-xs font-black tracking-wider uppercase text-black pt-1">
+                    TRAINING FEEDBACK & STUDENT SKILL EVALUATION REPORT
+                  </h3>
+                </div>
+
+                {/* Metadata Box matching official style */}
+                <div className="border border-black mb-4 text-[11px]">
+                  <div className="grid grid-cols-2 divide-x divide-black border-b border-black">
+                    <div className="p-1.5 px-3">
+                      <span className="font-bold">PROGRAMME : </span>
+                      <span className="font-normal uppercase">{feedbackData?.metadata?.programme || programme}</span>
+                    </div>
+                    <div className="p-1.5 px-3">
+                      <span className="font-bold">BATCH / SEC. : </span>
+                      <span className="font-normal uppercase">{feedbackData?.metadata?.batchSec || batchSec}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-black border-b border-black">
+                    <div className="p-1.5 px-3">
+                      <span className="font-bold">Name of the Faculty : </span>
+                      <span className="font-normal">{feedbackData?.metadata?.facultyName || facultyName}</span>
+                    </div>
+                    <div className="p-1.5 px-3">
+                      <span className="font-bold">Subject Name : </span>
+                      <span className="font-normal uppercase">{feedbackData?.metadata?.subjectName || subjectName}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-black">
+                    <div className="p-1.5 px-3">
+                      <span className="font-bold">ASSESSMENT DATE : </span>
+                      <span className="font-normal">{feedbackData?.metadata?.assessmentDate || assessmentDate}</span>
+                    </div>
+                    <div className="p-1.5 px-3">
+                      <span className="font-bold">Conducted : </span>
+                      <span className="font-normal">{feedbackData?.metadata?.conducted || conducted}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table of Student Responses */}
+                <div className="border border-black overflow-hidden">
+                  <table className="w-full border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-black border-b border-black text-[10px] font-bold uppercase tracking-wider text-center divide-x divide-black">
+                        <th className="py-2 px-1 w-10">S.No</th>
+                        <th className="py-2 px-2 w-28">Register Number</th>
+                        <th className="py-2 px-2 text-left w-36">Student Name</th>
+                        <th className="py-2 px-1 w-14">Skills<br/>(1-5 ★)</th>
+                        <th className="py-2 px-1 w-14">Concepts<br/>(1-5 ★)</th>
+                        <th className="py-2 px-1 w-14">Solving<br/>(1-5 ★)</th>
+                        <th className="py-2 px-1 w-14">Diff.<br/>(1-5 ★)</th>
+                        <th className="py-2 px-1 w-14">Debug<br/>(1-5 ★)</th>
+                        <th className="py-2 px-3 text-left">Suggestions & Improvements</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black text-black">
+                      {feedbackData?.records?.length > 0 ? (
+                        feedbackData.records.map((r: any) => (
+                          <tr key={r.id || r.sNo} className="divide-x divide-black hover:bg-slate-50 transition text-[11px]">
+                            <td className="py-2 px-1 text-center font-normal">{r.sNo}</td>
+                            <td className="py-2 px-2 text-center font-bold tracking-tight">{r.registerNumber}</td>
+                            <td className="py-2 px-2 text-left font-semibold uppercase">{r.studentName}</td>
+                            <td className="py-2 px-1 text-center font-bold text-amber-600">{r.overallSkills}★</td>
+                            <td className="py-2 px-1 text-center font-bold text-amber-600">{r.basicConcepts}★</td>
+                            <td className="py-2 px-1 text-center font-bold text-amber-600">{r.problemSolving}★</td>
+                            <td className="py-2 px-1 text-center font-bold text-amber-600">{r.difficultyLevel}★</td>
+                            <td className="py-2 px-1 text-center font-bold text-amber-600">{r.debuggingAbility}★</td>
+                            <td className="py-2 px-2 text-left">
+                              <span className="font-normal text-slate-800 text-[10.5px] leading-relaxed break-words whitespace-pre-wrap">
+                                {r.suggestions || '—'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={9} className="py-12 text-center text-slate-500 font-semibold text-xs">
+                            No feedback submissions recorded yet for this assessment and batch. Once students submit their feedback, ratings and suggestions will appear here.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Signatures */}
+                <div className="mt-16 pt-8 flex items-end justify-between font-serif text-xs text-black px-6">
+                  <div className="text-center space-y-1.5">
+                    <div className="w-52 border-b border-black mb-1 mx-auto" />
+                    <p className="font-normal">Signature of the Faculty</p>
                   </div>
                   <div className="text-center space-y-1.5">
                     <div className="w-52 border-b border-black mb-1 mx-auto" />

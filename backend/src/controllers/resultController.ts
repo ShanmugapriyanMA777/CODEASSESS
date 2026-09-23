@@ -127,6 +127,46 @@ export async function finishAssessment(req: AuthRequest, res: Response) {
       data: { status: 'COMPLETED' },
     });
 
+    // Save Assessment Training Feedback if provided
+    const { feedback } = req.body;
+    if (feedback) {
+      const q1 = Math.max(1, Math.min(5, Number(feedback.overallCodingSkillsRating || feedback.q1 || 5)));
+      const q2 = Math.max(1, Math.min(5, Number(feedback.basicConceptsUnderstandingRating || feedback.q2 || 5)));
+      const q3 = Math.max(1, Math.min(5, Number(feedback.problemSolvingRating || feedback.q3 || 5)));
+      const q4 = Math.max(1, Math.min(5, Number(feedback.difficultyLevelRating || feedback.q4 || 3)));
+      const q5 = Math.max(1, Math.min(5, Number(feedback.debuggingAbilityRating || feedback.q5 || 5)));
+      const suggestions = String(feedback.suggestions || '').trim();
+
+      try {
+        await prisma.assessmentFeedback.upsert({
+          where: {
+            assessmentId_studentId: { assessmentId, studentId: effectiveUserId },
+          },
+          update: {
+            overallCodingSkillsRating: q1,
+            basicConceptsUnderstandingRating: q2,
+            problemSolvingRating: q3,
+            difficultyLevelRating: q4,
+            debuggingAbilityRating: q5,
+            suggestions,
+            submittedAt: new Date(),
+          },
+          create: {
+            assessmentId,
+            studentId: effectiveUserId,
+            overallCodingSkillsRating: q1,
+            basicConceptsUnderstandingRating: q2,
+            problemSolvingRating: q3,
+            difficultyLevelRating: q4,
+            debuggingAbilityRating: q5,
+            suggestions,
+          },
+        });
+      } catch (fbErr: any) {
+        console.warn('Assessment feedback upsert notice:', fbErr.message);
+      }
+    }
+
     // Recalculate rankings dynamically
     await rankingService.recalculateAssessmentRankings(assessmentId);
 

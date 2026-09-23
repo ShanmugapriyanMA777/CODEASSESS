@@ -6,12 +6,15 @@ import {
   getClassStatementData,
   downloadClassStatementCsv,
   downloadClassStatementPdf,
+  getClassFeedbackData,
+  downloadClassFeedbackCsv,
+  downloadClassFeedbackPdf,
 } from '../controllers/reportController.js';
 import { requireAuth, requireAdmin } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-// All report generation & downloads are restricted strictly to Administrators
+// All report generation & downloads are restricted strictly to Administrators or Faculty
 router.use(requireAuth);
 router.use(requireAdmin);
 
@@ -23,5 +26,10 @@ router.get('/assessment/:assessmentId', downloadAssessmentPdfReport);
 router.get('/class-statement', getClassStatementData);
 router.get('/class-statement/csv', downloadClassStatementCsv);
 router.get('/class-statement/pdf', downloadClassStatementPdf);
+
+// Class Training Feedback & Skill Evaluation endpoints
+router.get('/class-feedback', getClassFeedbackData);
+router.get('/class-feedback/csv', downloadClassFeedbackCsv);
+router.get('/class-feedback/pdf', downloadClassFeedbackPdf);
 
 export default router;

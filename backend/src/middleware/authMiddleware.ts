@@ -81,8 +81,8 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
 }
 
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
-  if (!req.user || req.user.role !== 'ADMIN') {
-    return sendError(res, 'Access denied. Administrator privileges required.', 403);
+  if (!req.user || (req.user.role !== 'ADMIN' && req.user.role !== 'FACULTY')) {
+    return sendError(res, 'Access denied. Administrator or Faculty privileges required.', 403);
   }
   next();
 }

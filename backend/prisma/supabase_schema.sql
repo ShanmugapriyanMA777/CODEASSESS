@@ -243,6 +243,21 @@ CREATE TABLE "SuspiciousEvent" (
     "metadata" TEXT
 );
 
+-- Table: AssessmentFeedback
+CREATE TABLE IF NOT EXISTS "AssessmentFeedback" (
+    "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "assessmentId" TEXT NOT NULL REFERENCES "Assessment"("id") ON DELETE CASCADE,
+    "studentId" TEXT NOT NULL REFERENCES "User"("id") ON DELETE CASCADE,
+    "overallCodingSkillsRating" INTEGER NOT NULL,
+    "basicConceptsUnderstandingRating" INTEGER NOT NULL,
+    "problemSolvingRating" INTEGER NOT NULL,
+    "difficultyLevelRating" INTEGER NOT NULL,
+    "debuggingAbilityRating" INTEGER NOT NULL,
+    "suggestions" TEXT,
+    "submittedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "AssessmentFeedback_assessmentId_studentId_key" UNIQUE ("assessmentId", "studentId")
+);
+
 -- Table: AuditLog
 CREATE TABLE "AuditLog" (
     "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
