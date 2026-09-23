@@ -1109,8 +1109,11 @@ export const AssessmentTake: React.FC = () => {
                 </div>
               ) : (
                 <p className="mt-2 text-xs text-slate-400 leading-relaxed">
-                  You have solved <span className="text-emerald-400 font-bold">{solvedCount}</span> of <span className="text-white font-bold">{questions.length}</span> questions.
-                  Please complete the following training feedback. Students can only navigate to the scorecard and submit after completing all 5 star ratings and written feedback.
+                  You have currently solved <span className="text-emerald-400 font-bold">{solvedCount}</span> of <span className="text-white font-bold">{questions.length}</span> questions.
+                  Once submitted, you will receive your final evaluation marks, ranking, and performance scorecard.
+                  <span className="block mt-1 text-amber-400/90 font-medium">
+                    ★ Complete the 5-star ratings and written feedback below to submit:
+                  </span>
                 </p>
               )}
             </div>
@@ -1136,7 +1139,7 @@ export const AssessmentTake: React.FC = () => {
               {/* Question 3 */}
               <StarRatingInput
                 questionNumber={3}
-                label="How do you rate yourself in solving the coding problems?"
+                label="How rate yourself to solving the coding problems?"
                 value={feedbackRatings.q3}
                 onChange={(val) => setFeedbackRatings((prev) => ({ ...prev, q3: val }))}
               />
@@ -1237,7 +1240,7 @@ export const AssessmentTake: React.FC = () => {
                 ) : (
                   <>
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Submit Feedback & View Results</span>
+                    <span>Yes, Submit Now</span>
                   </>
                 )}
               </button>
