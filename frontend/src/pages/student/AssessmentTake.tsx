@@ -61,24 +61,24 @@ const StarRatingInput: React.FC<StarRatingInputProps> = ({
   const displayVal = hoverVal || value;
 
   return (
-    <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 transition hover:border-slate-750 space-y-2">
+    <div className="p-4 rounded-xl bg-white border border-amber-200/90 shadow-sm transition-all hover:border-amber-400 hover:shadow-md hover:shadow-amber-100/60 space-y-2">
       <div className="flex items-start justify-between gap-2">
-        <label className="text-xs font-semibold text-slate-200 leading-snug">
-          <span className="text-amber-400 font-bold mr-1.5">Q{questionNumber}.</span>
+        <label className="text-xs sm:text-sm font-semibold text-slate-800 leading-snug">
+          <span className="text-amber-500 font-bold mr-1.5">Q{questionNumber}.</span>
           {label}
         </label>
         <span
-          className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0 transition-colors ${
             displayVal > 0
-              ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20'
-              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+              ? 'bg-amber-500 text-white shadow-sm'
+              : 'bg-amber-50 text-amber-700 border border-amber-200'
           }`}
         >
           {displayVal > 0 ? labels[displayVal] : 'Required ★'}
         </span>
       </div>
 
-      <div className="flex items-center space-x-1.5 pt-0.5">
+      <div className="flex items-center space-x-1.5 pt-1">
         {[1, 2, 3, 4, 5].map((star) => {
           const active = displayVal >= star;
           return (
@@ -92,10 +92,10 @@ const StarRatingInput: React.FC<StarRatingInputProps> = ({
               title={`${star} Star${star > 1 ? 's' : ''}`}
             >
               <Star
-                className={`w-6 h-6 transition-colors ${
+                className={`w-6 h-6 transition-all ${
                   active
-                    ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]'
-                    : 'text-slate-600 hover:text-slate-400'
+                    ? 'text-amber-500 fill-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.55)]'
+                    : 'text-amber-200 stroke-amber-400/60 hover:text-amber-300'
                 }`}
               />
             </button>
@@ -1057,22 +1057,22 @@ export const AssessmentTake: React.FC = () => {
 
       {/* MANDATORY POST-ASSESSMENT TRAINING FEEDBACK MODAL */}
       {finishModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white border-2 border-amber-300 rounded-2xl max-w-2xl w-full shadow-2xl shadow-amber-500/15 overflow-hidden flex flex-col my-auto max-h-[92vh]">
             {/* Modal Header */}
-            <div className="p-5 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 flex-shrink-0">
+            <div className="p-5 border-b border-amber-200 bg-gradient-to-r from-amber-50/90 via-white to-amber-50/90 flex-shrink-0">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-white border border-amber-400 shadow-sm">
                       Mandatory Feedback
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] font-semibold text-amber-900">
                       Agni College of Technology
                     </span>
                   </div>
-                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500 fill-amber-400/40" />
                     Training Feedback & Assessment Submission
                   </h3>
                 </div>
@@ -1082,8 +1082,8 @@ export const AssessmentTake: React.FC = () => {
                   <span
                     className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                       ratedCount === 5
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border border-amber-300'
                     }`}
                   >
                     {ratedCount}/5 Stars
@@ -1091,8 +1091,8 @@ export const AssessmentTake: React.FC = () => {
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       hasWrittenSuggestions
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200'
                     }`}
                   >
                     {hasWrittenSuggestions ? 'Written: Done' : 'Written: Pending'}
@@ -1102,17 +1102,17 @@ export const AssessmentTake: React.FC = () => {
 
               {/* Status Banner */}
               {isTimeUp ? (
-                <div className="mt-3 p-2.5 rounded-lg bg-rose-950/50 border border-rose-800/60 text-xs text-rose-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-950 flex items-center gap-2.5 shadow-sm">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                   <span>
-                    <strong>Assessment Time Has Concluded.</strong> Your answers have been preserved. Submit your feedback below to generate your final marks and class rankings.
+                    <strong className="text-amber-800">Assessment Time Has Concluded.</strong> Your answers have been preserved. Submit your feedback below to generate your final marks and class rankings.
                   </span>
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-slate-400 leading-relaxed">
-                  You have currently solved <span className="text-emerald-400 font-bold">{solvedCount}</span> of <span className="text-white font-bold">{questions.length}</span> questions.
+                <p className="mt-2 text-xs text-slate-600 leading-relaxed">
+                  You have currently solved <span className="text-emerald-600 font-bold">{solvedCount}</span> of <span className="text-slate-900 font-bold">{questions.length}</span> questions.
                   Once submitted, you will receive your final evaluation marks, ranking, and performance scorecard.
-                  <span className="block mt-1 text-amber-400/90 font-medium">
+                  <span className="block mt-1 text-amber-700 font-medium">
                     ★ Complete the 5-star ratings and written feedback below to submit:
                   </span>
                 </p>
@@ -1120,7 +1120,7 @@ export const AssessmentTake: React.FC = () => {
             </div>
 
             {/* Scrollable Questions Body */}
-            <div className="p-5 space-y-4 overflow-y-auto flex-1 text-slate-200">
+            <div className="p-5 space-y-4 overflow-y-auto flex-1 bg-gradient-to-b from-amber-50/30 via-white to-amber-50/10">
               {/* Question 1 */}
               <StarRatingInput
                 questionNumber={1}
@@ -1162,17 +1162,17 @@ export const AssessmentTake: React.FC = () => {
               />
 
               {/* Question 6 - Written Text */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 transition hover:border-slate-750 space-y-2">
+              <div className="p-4 rounded-xl bg-white border border-amber-200/90 shadow-sm transition-all hover:border-amber-400 hover:shadow-md hover:shadow-amber-100/60 space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <label htmlFor="feedback-suggestions" className="text-xs font-semibold text-slate-200 leading-snug">
-                    <span className="text-amber-400 font-bold mr-1.5">Q6.</span>
+                  <label htmlFor="feedback-suggestions" className="text-xs sm:text-sm font-semibold text-slate-800 leading-snug">
+                    <span className="text-amber-500 font-bold mr-1.5">Q6.</span>
                     Improvements or additional support would you suggest for aptitude and coding training
                   </label>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex-shrink-0 transition-colors ${
                       hasWrittenSuggestions
-                        ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20'
-                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
                     }`}
                   >
                     {hasWrittenSuggestions ? 'Written ✓' : 'Required *'}
@@ -1185,35 +1185,35 @@ export const AssessmentTake: React.FC = () => {
                   value={feedbackSuggestions}
                   onChange={(e) => setFeedbackSuggestions(e.target.value)}
                   placeholder="Please write your suggestions, areas where you need additional support, topics you'd like more practice on..."
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition resize-none"
+                  className="w-full bg-white border border-amber-200 rounded-lg p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/20 transition resize-none"
                 />
                 <div className="flex justify-between items-center text-[10px] text-slate-500">
                   <span>Your written feedback helps faculty tailor upcoming training sessions.</span>
-                  <span>{feedbackSuggestions.trim().length} characters</span>
+                  <span className="font-semibold text-amber-700">{feedbackSuggestions.trim().length} characters</span>
                 </div>
               </div>
 
               {/* Validation Error Banner */}
               {feedbackError && (
-                <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-xs text-rose-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 flex-shrink-0" />
                   <span>{feedbackError}</span>
                 </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-3 flex-shrink-0">
+            <div className="p-4 border-t border-amber-200 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/80 flex items-center justify-between gap-3 flex-shrink-0">
               {!isTimeUp ? (
                 <button
                   type="button"
                   onClick={() => setFinishModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-white hover:bg-amber-50 text-slate-700 border border-amber-200 text-xs font-semibold transition cursor-pointer shadow-sm"
                 >
                   Continue Assessment
                 </button>
               ) : (
-                <span className="text-[11px] text-slate-500 italic">
+                <span className="text-[11px] text-amber-800/80 italic font-medium">
                   Time expired &mdash; Submission mandatory
                 </span>
               )}
@@ -1227,20 +1227,20 @@ export const AssessmentTake: React.FC = () => {
                     ? 'Please rate all 5 star questions and write your suggestions before submitting.'
                     : 'Submit your assessment and view your final scorecard.'
                 }
-                className={`flex items-center space-x-2 px-5 py-2.5 rounded-lg text-xs font-bold transition shadow-lg cursor-pointer ${
+                className={`flex items-center space-x-2 px-5 py-2.5 rounded-lg text-xs font-bold transition shadow-md cursor-pointer ${
                   isFeedbackComplete && !submittingFeedback
-                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/30'
-                    : 'bg-slate-800 text-slate-500 border border-slate-700/50 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-extrabold shadow-amber-500/30'
+                    : 'bg-amber-100/70 text-amber-800/40 border border-amber-200/80 cursor-not-allowed'
                 }`}
               >
                 {submittingFeedback ? (
                   <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-amber-900/30 border-t-amber-900 rounded-full animate-spin" />
                     <span>Submitting Feedback...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
                     <span>Yes, Submit Now</span>
                   </>
                 )}
