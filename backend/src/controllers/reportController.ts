@@ -434,16 +434,6 @@ export async function downloadClassStatementCsv(req: AuthRequest, res: Response)
     const { metadata, records } = await buildClassStatementPayload(req);
 
     const lines: string[] = [
-      `"${metadata.institutionName}"`,
-      `"${metadata.subHeader}"`,
-      `"${metadata.accreditation}"`,
-      `"${metadata.location}"`,
-      '"ASSESSMENT REPORT"',
-      '',
-      `"PROGRAMME : ${metadata.programme}","BATCH / SEC. : ${metadata.batchSec}"`,
-      `"Name of the Faculty : ${metadata.facultyName}","Subject Name : ${metadata.subjectName}"`,
-      `"ASSESSMENT DATE : ${metadata.assessmentDate}","Conducted : ${metadata.conducted}"`,
-      '',
       'S.NO,REGISTER NUMBER,NAME OF THE STUDENT,TEST MARKS,PASS/FAIL,ATTENDED HOURS',
     ];
 
@@ -452,9 +442,6 @@ export async function downloadClassStatementCsv(req: AuthRequest, res: Response)
         `${r.sNo},${r.registerNumber},"${r.studentName.replace(/"/g, '""')}",${r.testMarks},${r.passFail},${r.attendedHours}`
       );
     });
-
-    lines.push('');
-    lines.push(`"Name of the Faculty : ${metadata.facultyName}","","","","","Signature of the HoD."`);
 
     const csvContent = lines.join('\r\n');
     const safeBatch = (metadata.batchName || 'Overall').replace(/[^a-zA-Z0-9]/g, '_');
@@ -835,27 +822,9 @@ export async function getClassFeedbackData(req: AuthRequest, res: Response) {
  */
 export async function downloadClassFeedbackCsv(req: AuthRequest, res: Response) {
   try {
-    const { metadata, summaryMetrics, records } = await buildClassFeedbackPayload(req);
+    const { metadata, records } = await buildClassFeedbackPayload(req);
 
     const lines: string[] = [
-      `"${metadata.institutionName}"`,
-      `"${metadata.subHeader}"`,
-      `"${metadata.accreditation}"`,
-      `"${metadata.location}"`,
-      '"STUDENT TRAINING FEEDBACK & SKILL EVALUATION REPORT"',
-      '',
-      `"PROGRAMME : ${metadata.programme}","BATCH / SEC. : ${metadata.batchSec}"`,
-      `"FACULTY : ${metadata.facultyName}","SUBJECT : ${metadata.subjectName}"`,
-      `"ASSESSMENT DATE : ${metadata.assessmentDate}","CONDUCTED : ${metadata.conducted}"`,
-      '',
-      '"OVERALL CLASS FEEDBACK METRICS (5-STAR SCALE):"',
-      `"Overall Skills Rating Average","${summaryMetrics.avgOverallSkills} / 5 Stars"`,
-      `"Basic Concepts Understanding Average","${summaryMetrics.avgBasicConcepts} / 5 Stars"`,
-      `"Problem Solving Rating Average","${summaryMetrics.avgProblemSolving} / 5 Stars"`,
-      `"Difficulty Level Rating Average","${summaryMetrics.avgDifficultyLevel} / 5 Stars"`,
-      `"Error Debugging Rating Average","${summaryMetrics.avgDebuggingAbility} / 5 Stars"`,
-      `"Total Student Responses","${summaryMetrics.totalResponses}"`,
-      '',
       'S.NO,REGISTER NUMBER,NAME OF THE STUDENT,OVERALL SKILLS (1-5),BASIC CONCEPTS (1-5),PROBLEM SOLVING (1-5),DIFFICULTY LEVEL (1-5),DEBUGGING ABILITY (1-5),SUGGESTIONS & IMPROVEMENTS',
     ];
 
@@ -864,9 +833,6 @@ export async function downloadClassFeedbackCsv(req: AuthRequest, res: Response) 
         `${r.sNo},${r.registerNumber},"${r.studentName.replace(/"/g, '""')}",${r.overallSkills},${r.basicConcepts},${r.problemSolving},${r.difficultyLevel},${r.debuggingAbility},"${(r.suggestions || '').replace(/"/g, '""')}"`
       );
     });
-
-    lines.push('');
-    lines.push(`"Signature of the Faculty : ${metadata.facultyName}","","","","","","","Signature of the HoD."`);
 
     const csvContent = lines.join('\r\n');
     const safeBatch = (metadata.batchName || 'Overall').replace(/[^a-zA-Z0-9]/g, '_');
