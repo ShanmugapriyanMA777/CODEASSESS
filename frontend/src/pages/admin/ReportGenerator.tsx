@@ -238,27 +238,55 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ defaultTab }) 
   const handleDownloadCsv = async () => {
     setDownloadingCsv(true);
     try {
-      const params = new URLSearchParams();
-      if (selectedBatchId) params.append('batchId', selectedBatchId);
-      if (selectedAssessmentId) params.append('assessmentId', selectedAssessmentId);
-      params.append('completedOnly', completedOnly.toString());
-      params.append('institutionName', institutionName);
-      params.append('subHeader', subHeader);
-      params.append('accreditation', accreditation);
-      params.append('location', location);
-      params.append('statementTitle', statementTitle);
-      params.append('programme', programme);
-      params.append('batchSec', batchSec);
-      params.append('facultyName', facultyName);
-      params.append('subjectName', subjectName);
-      params.append('assessmentDate', assessmentDate);
-      params.append('conducted', conducted);
+      let csvContent = '';
+      if (statementData?.records && statementData.records.length > 0) {
+        const lines = [
+          'S.NO,REGISTER NUMBER,NAME OF THE STUDENT,TEST MARKS,PASS/FAIL,ATTENDED HOURS',
+        ];
+        statementData.records.forEach((r: any) => {
+          lines.push(
+            `${r.sNo},${r.registerNumber},"${(r.studentName || '').replace(/"/g, '""')}",${r.testMarks},${r.passFail},${r.attendedHours}`
+          );
+        });
+        csvContent = lines.join('\r\n');
+      } else {
+        const params = new URLSearchParams();
+        if (selectedBatchId) params.append('batchId', selectedBatchId);
+        if (selectedAssessmentId) params.append('assessmentId', selectedAssessmentId);
+        params.append('completedOnly', completedOnly.toString());
+        params.append('institutionName', institutionName);
+        params.append('subHeader', subHeader);
+        params.append('accreditation', accreditation);
+        params.append('location', location);
+        params.append('statementTitle', statementTitle);
+        params.append('programme', programme);
+        params.append('batchSec', batchSec);
+        params.append('facultyName', facultyName);
+        params.append('subjectName', subjectName);
+        params.append('assessmentDate', assessmentDate);
+        params.append('conducted', conducted);
 
-      const res = await api.get(`/reports/class-statement/csv?${params.toString()}`, {
-        responseType: 'blob',
-      });
+        const res = await api.get(`/reports/class-statement/csv?${params.toString()}`, {
+          responseType: 'text',
+        });
+        let rawCsv = typeof res.data === 'string' ? res.data : '';
+        const headerIndex = rawCsv.indexOf('S.NO,REGISTER NUMBER');
+        if (headerIndex !== -1) {
+          rawCsv = rawCsv.substring(headerIndex);
+          const footerIndex = rawCsv.indexOf('\r\n"Name of the Faculty');
+          if (footerIndex !== -1) {
+            rawCsv = rawCsv.substring(0, footerIndex);
+          } else {
+            const footerIndexLf = rawCsv.indexOf('\n"Name of the Faculty');
+            if (footerIndexLf !== -1) {
+              rawCsv = rawCsv.substring(0, footerIndexLf);
+            }
+          }
+        }
+        csvContent = rawCsv;
+      }
 
-      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -267,6 +295,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ defaultTab }) 
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       alert('Failed to download CSV report');
     } finally {
@@ -345,24 +374,53 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ defaultTab }) 
   const handleDownloadFeedbackCsv = async () => {
     setDownloadingFeedbackCsv(true);
     try {
-      const params = new URLSearchParams();
-      if (selectedBatchId) params.append('batchId', selectedBatchId);
-      if (selectedAssessmentId) params.append('assessmentId', selectedAssessmentId);
-      params.append('institutionName', institutionName);
-      params.append('subHeader', subHeader);
-      params.append('accreditation', accreditation);
-      params.append('location', location);
-      params.append('programme', programme);
-      params.append('batchSec', batchSec);
-      params.append('facultyName', facultyName);
-      params.append('subjectName', subjectName);
-      params.append('assessmentDate', assessmentDate);
-      params.append('conducted', conducted);
+      let csvContent = '';
+      if (feedbackData?.records && feedbackData.records.length > 0) {
+        const lines = [
+          'S.NO,REGISTER NUMBER,NAME OF THE STUDENT,OVERALL SKILLS (1-5),BASIC CONCEPTS (1-5),PROBLEM SOLVING (1-5),DIFFICULTY LEVEL (1-5),DEBUGGING ABILITY (1-5),SUGGESTIONS & IMPROVEMENTS',
+        ];
+        feedbackData.records.forEach((r: any) => {
+          lines.push(
+            `${r.sNo},${r.registerNumber},"${(r.studentName || '').replace(/"/g, '""')}",${r.overallSkills},${r.basicConcepts},${r.problemSolving},${r.difficultyLevel},${r.debuggingAbility},"${(r.suggestions || '').replace(/"/g, '""')}"`
+          );
+        });
+        csvContent = lines.join('\r\n');
+      } else {
+        const params = new URLSearchParams();
+        if (selectedBatchId) params.append('batchId', selectedBatchId);
+        if (selectedAssessmentId) params.append('assessmentId', selectedAssessmentId);
+        params.append('institutionName', institutionName);
+        params.append('subHeader', subHeader);
+        params.append('accreditation', accreditation);
+        params.append('location', location);
+        params.append('programme', programme);
+        params.append('batchSec', batchSec);
+        params.append('facultyName', facultyName);
+        params.append('subjectName', subjectName);
+        params.append('assessmentDate', assessmentDate);
+        params.append('conducted', conducted);
 
-      const res = await api.get(`/reports/class-feedback/csv?${params.toString()}`, {
-        responseType: 'blob',
-      });
-      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+        const res = await api.get(`/reports/class-feedback/csv?${params.toString()}`, {
+          responseType: 'text',
+        });
+        let rawCsv = typeof res.data === 'string' ? res.data : '';
+        const headerIndex = rawCsv.indexOf('S.NO,REGISTER NUMBER');
+        if (headerIndex !== -1) {
+          rawCsv = rawCsv.substring(headerIndex);
+          const footerIndex = rawCsv.indexOf('\r\n"Signature of the Faculty');
+          if (footerIndex !== -1) {
+            rawCsv = rawCsv.substring(0, footerIndex);
+          } else {
+            const footerIndexLf = rawCsv.indexOf('\n"Signature of the Faculty');
+            if (footerIndexLf !== -1) {
+              rawCsv = rawCsv.substring(0, footerIndexLf);
+            }
+          }
+        }
+        csvContent = rawCsv;
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -371,6 +429,7 @@ export const ReportGenerator: React.FC<ReportGeneratorProps> = ({ defaultTab }) 
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('Download feedback CSV error:', err);
       let errMsg = 'Failed to download Class Feedback CSV report';
